@@ -95,18 +95,27 @@ const CrownIcon = ({ className = "" }) => (
 // Header Component
 const Header = ({ onLogoClick }) => {
   const [clickCount, setClickCount] = useState(0);
+  const clickTimerRef = useState(null);
 
   const handleLogoClick = () => {
-    const newCount = clickCount + 1;
-    setClickCount(newCount);
-    
-    if (newCount >= 5) {
-      onLogoClick();
-      setClickCount(0);
-    }
-    
-    // Reset count after 2 seconds
-    setTimeout(() => setClickCount(0), 2000);
+    setClickCount(prev => {
+      const newCount = prev + 1;
+      
+      // Clear existing timer
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+      }
+      
+      // Reset count after 3 seconds of no clicks
+      clickTimerRef.current = setTimeout(() => setClickCount(0), 3000);
+      
+      if (newCount >= 5) {
+        onLogoClick();
+        return 0;
+      }
+      
+      return newCount;
+    });
   };
 
   return (
