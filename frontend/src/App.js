@@ -305,7 +305,7 @@ const HomePage = () => {
         <div className="flex items-center gap-2 mb-4">
           <Check className="w-5 h-5 text-[var(--gold)]" />
           <h2 className="font-display text-lg text-white uppercase tracking-wider">
-            Today's Selections
+            Today&apos;s Selections
           </h2>
         </div>
         
