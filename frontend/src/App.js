@@ -771,6 +771,7 @@ const AdminPanel = ({ onClose }) => {
     } else {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adminVerified]);
 
   const fetchBets = async () => {
