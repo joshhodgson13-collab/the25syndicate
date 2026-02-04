@@ -1,34 +1,100 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
-}
+/* App.css - Additional styles for The 2.5 Syndicate */
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
-}
-
-.App-header {
-    background-color: #0f0f10;
+.App {
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+    background-color: var(--obsidian);
 }
 
-.App-link {
-    color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
+/* Ensure proper mobile viewport handling */
+@supports (padding: max(0px)) {
+    .App {
+        padding-bottom: max(80px, env(safe-area-inset-bottom));
     }
+}
+
+/* Dialog/Modal styling overrides */
+[role="dialog"] {
+    background: var(--charcoal) !important;
+}
+
+/* Select dropdown styling */
+[role="listbox"] {
+    background: var(--charcoal) !important;
+    border: 1px solid var(--charcoal-lighter) !important;
+}
+
+[role="option"] {
+    color: var(--text-primary) !important;
+}
+
+[role="option"]:hover,
+[role="option"][data-highlighted] {
+    background: var(--charcoal-lighter) !important;
+}
+
+/* Button focus states */
+button:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+}
+
+/* Link styling */
+a {
+    color: var(--gold);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--gold-light);
+}
+
+/* Loading spinner */
+.spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--charcoal-lighter);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
     to {
         transform: rotate(360deg);
     }
+}
+
+/* Smooth page transitions */
+main {
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* Touch feedback for mobile */
+@media (hover: none) {
+    .bet-card:active {
+        transform: scale(0.98);
+    }
+    
+    .btn-gold:active {
+        transform: scale(0.95);
+    }
+    
+    .nav-item:active {
+        opacity: 0.7;
+    }
+}
+
+/* Prevent text selection on UI elements */
+button, .nav-item, .bet-card {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Safe area insets for notched devices */
+.bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+header {
+    padding-top: env(safe-area-inset-top);
 }
