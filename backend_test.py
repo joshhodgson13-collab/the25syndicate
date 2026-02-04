@@ -44,13 +44,18 @@ class SyndicateAPITester:
         
         # Set up headers
         req_headers = {'Content-Type': 'application/json'}
-        if headers:
-            req_headers.update(headers)
         
-        # Add auth token if available
-        token = self.admin_token if use_admin and self.admin_token else self.token
-        if token:
-            req_headers['Authorization'] = f'Bearer {token}'
+        # Add auth token if available (only if not provided in custom headers)
+        if headers and 'Authorization' in headers:
+            # Use custom headers as-is (for testing unauthorized access)
+            req_headers.update(headers)
+        else:
+            # Use default token logic
+            token = self.admin_token if use_admin and self.admin_token else self.token
+            if token:
+                req_headers['Authorization'] = f'Bearer {token}'
+            if headers:
+                req_headers.update(headers)
 
         try:
             if method.upper() == 'GET':
