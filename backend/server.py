@@ -105,6 +105,24 @@ class CheckoutRequest(BaseModel):
 class CheckoutStatusRequest(BaseModel):
     session_id: str
 
+# Notification Models
+class NotificationSubscription(BaseModel):
+    endpoint: str
+    keys: dict
+
+class NotificationCreate(BaseModel):
+    title: str
+    body: str
+    notification_type: str  # "bets_live", "results", "custom"
+
+class NotificationResponse(BaseModel):
+    id: str
+    title: str
+    body: str
+    notification_type: str
+    sent_at: str
+    sent_by: str
+
 # ============ AUTH HELPERS ============
 
 def hash_password(password: str) -> str:
