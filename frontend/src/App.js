@@ -915,8 +915,8 @@ const AdminPanel = ({ onClose }) => {
       return;
     }
     
-    // Split by common message separators
-    const blocks = pasteText.split(/\n\n+|\n(?=[A-Z][a-z]+ v [A-Z])/);
+    // Split by double newlines or bet result patterns to separate messages
+    const blocks = pasteText.split(/\n\n+/);
     const parsed = [];
     
     let currentMatch = { home_team: "", away_team: "" };
