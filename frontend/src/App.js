@@ -248,6 +248,18 @@ const BetCard = ({ bet, showResult = false }) => {
     minute: '2-digit' 
   });
 
+  // Calculate profit/loss
+  const calculateProfitLoss = () => {
+    if (bet.status === "won") {
+      return (bet.stake * (bet.odds - 1)).toFixed(2);
+    } else if (bet.status === "lost") {
+      return (-bet.stake).toFixed(2);
+    }
+    return null;
+  };
+
+  const profitLoss = showResult ? calculateProfitLoss() : null;
+
   return (
     <div className="bet-card p-4 animate-fade-in" data-testid={`bet-card-${bet.id}`}>
       <div className="flex justify-between items-start mb-3">
@@ -261,9 +273,16 @@ const BetCard = ({ bet, showResult = false }) => {
         </div>
         <div className="text-right">
           {showResult ? (
-            <span className={bet.status === "won" ? "badge-won" : "badge-lost"}>
-              {bet.status}
-            </span>
+            <div className="flex flex-col items-end gap-1">
+              <span className={bet.status === "won" ? "badge-won" : "badge-lost"}>
+                {bet.status}
+              </span>
+              {profitLoss && (
+                <span className={`font-bold text-sm ${parseFloat(profitLoss) >= 0 ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
+                  {parseFloat(profitLoss) >= 0 ? '+' : ''}{profitLoss} pts
+                </span>
+              )}
+            </div>
           ) : (
             <div className="flex items-center gap-1 text-[var(--text-secondary)]">
               <Clock className="w-4 h-4" />
@@ -276,10 +295,9 @@ const BetCard = ({ bet, showResult = false }) => {
       <div className="flex justify-between items-end">
         <div>
           <p className="text-[var(--gold)] font-semibold text-lg mb-2">{bet.bet_type}</p>
-          <div className="flex items-center gap-2">
-            <span className="text-[var(--text-secondary)] text-sm">Stake:</span>
-            <StakeIndicator stake={bet.stake} />
-          </div>
+          <p className="text-[var(--text-secondary)] text-sm">
+            Points: <span className="text-white font-medium">{bet.stake}</span>
+          </p>
         </div>
         <div className="text-right">
           <p className="text-[var(--text-muted)] text-xs">Odds</p>
