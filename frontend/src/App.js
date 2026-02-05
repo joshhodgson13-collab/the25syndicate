@@ -430,10 +430,39 @@ const ResultsPage = () => {
     fetchResults();
   }, []);
 
+  // Calculate all-time profit/loss
+  const calculateTotalProfitLoss = () => {
+    let total = 0;
+    for (const bet of bets) {
+      if (bet.status === "won") {
+        total += bet.stake * (bet.odds - 1);
+      } else if (bet.status === "lost") {
+        total -= bet.stake;
+      }
+    }
+    return total.toFixed(2);
+  };
+
+  const totalProfitLoss = bets.length > 0 ? calculateTotalProfitLoss() : "0.00";
+  const isProfit = parseFloat(totalProfitLoss) >= 0;
+
   return (
     <div className="pb-24 px-4" data-testid="results-page">
       <div className="my-4">
-        <h2 className="font-display text-2xl text-[var(--gold)] text-center mb-6">RESULTS</h2>
+        <h2 className="font-display text-2xl text-[var(--gold)] text-center mb-4">RESULTS</h2>
+        
+        {/* All-time Profit/Loss Banner */}
+        {bets.length > 0 && (
+          <div className={`vip-card p-4 mb-6 text-center ${isProfit ? 'border-[var(--success)]' : 'border-[var(--error)]'}`} style={{ borderColor: isProfit ? 'var(--success)' : 'var(--error)' }}>
+            <p className="text-[var(--text-secondary)] text-sm mb-1">All-Time Profit/Loss</p>
+            <p className={`font-display text-3xl font-bold ${isProfit ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
+              {isProfit ? '+' : ''}{totalProfitLoss} pts
+            </p>
+            <p className="text-[var(--text-muted)] text-xs mt-2">
+              {bets.filter(b => b.status === "won").length} wins / {bets.filter(b => b.status === "lost").length} losses
+            </p>
+          </div>
+        )}
         
         {loading ? (
           <div className="text-center py-8 text-[var(--text-secondary)]">Loading...</div>
