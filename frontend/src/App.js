@@ -307,54 +307,61 @@ const BetCard = ({ bet, showResult = false }) => {
 
 // Ad Locked Bet Component
 const AdLockedBet = ({ bet, index }) => {
-  const [isLocked, setIsLocked] = useState(true);
+  // Check localStorage for previously unlocked bets on mount
+  const getInitialLockState = () => {
+    const unlockedBets = JSON.parse(localStorage.getItem('unlockedBets') || '[]');
+    return !unlockedBets.includes(bet.id);
+  };
+  
+  const [isLocked, setIsLocked] = useState(getInitialLockState);
   const [showingAd, setShowingAd] = useState(false);
   const [countdown, setCountdown] = useState(15);
-  const [adLoaded, setAdLoaded] = useState(false);
-  
-  // Check localStorage for previously unlocked bets
-  useEffect(() => {
-    const unlockedBets = JSON.parse(localStorage.getItem('unlockedBets') || '[]');
-    if (unlockedBets.includes(bet.id)) {
-      setIsLocked(false);
-    }
-  }, [bet.id]);
+  const adContainerRef = useState(null);
   
   // Countdown timer when showing ad
   useEffect(() => {
     let timer;
     if (showingAd && countdown > 0) {
-      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-    } else if (showingAd && countdown === 0) {
-      // Ad finished - unlock the bet
-      setShowingAd(false);
-      setIsLocked(false);
-      // Save to localStorage
-      const unlockedBets = JSON.parse(localStorage.getItem('unlockedBets') || '[]');
-      if (!unlockedBets.includes(bet.id)) {
-        unlockedBets.push(bet.id);
-        localStorage.setItem('unlockedBets', JSON.stringify(unlockedBets));
-      }
+      timer = setTimeout(() => setCountdown(prev => prev - 1), 1000);
     }
     return () => clearTimeout(timer);
+  }, [showingAd, countdown]);
+  
+  // Handle countdown completion
+  useEffect(() => {
+    if (showingAd && countdown === 0) {
+      // Use setTimeout to avoid synchronous setState in effect
+      const unlockTimeout = setTimeout(() => {
+        setShowingAd(false);
+        setIsLocked(false);
+        // Save to localStorage
+        const unlockedBets = JSON.parse(localStorage.getItem('unlockedBets') || '[]');
+        if (!unlockedBets.includes(bet.id)) {
+          unlockedBets.push(bet.id);
+          localStorage.setItem('unlockedBets', JSON.stringify(unlockedBets));
+        }
+      }, 0);
+      return () => clearTimeout(unlockTimeout);
+    }
   }, [showingAd, countdown, bet.id]);
   
-  // Load AdSense ad
+  // Load AdSense ad when showing
   useEffect(() => {
-    if (showingAd && !adLoaded) {
-      try {
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-        setAdLoaded(true);
-      } catch (e) {
-        console.log('AdSense error:', e);
-      }
+    if (showingAd) {
+      const loadAdTimeout = setTimeout(() => {
+        try {
+          (window.adsbygoogle = window.adsbygoogle || []).push({});
+        } catch (e) {
+          console.log('AdSense error:', e);
+        }
+      }, 100);
+      return () => clearTimeout(loadAdTimeout);
     }
-  }, [showingAd, adLoaded]);
+  }, [showingAd]);
   
   const startWatchingAd = () => {
     setShowingAd(true);
     setCountdown(15);
-    setAdLoaded(false);
   };
   
   // Show unlocked bet
