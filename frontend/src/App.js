@@ -944,6 +944,15 @@ const AdminPanel = ({ onClose }) => {
   const [pasteText, setPasteText] = useState("");
   const [showPasteImport, setShowPasteImport] = useState(false);
   const [pastePreview, setPastePreview] = useState([]);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [quickResult, setQuickResult] = useState({
+    home_team: "",
+    away_team: "",
+    bet_type: "",
+    stake: 5,
+    odds: 1.80,
+    status: "won"
+  });
 
   const parsePastedText = () => {
     if (!pasteText.trim()) {
