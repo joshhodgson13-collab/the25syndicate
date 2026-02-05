@@ -94,9 +94,46 @@ const CrownIcon = ({ className = "" }) => (
 );
 
 // Header Component
-const Header = ({ onLogoClick }) => {
+const Header = ({ onLogoClick, onNotificationClick }) => {
   const [clickCount, setClickCount] = useState(0);
   const clickTimerRef = useState(null);
+  const { user, token } = useAuth();
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [hasNewNotification, setHasNewNotification] = useState(false);
+
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (user && token) {
+        try {
+          const response = await axios.get(`${API}/notifications/status`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setIsSubscribed(response.data.subscribed);
+        } catch (e) {
+          console.error("Error checking notification status:", e);
+        }
+      }
+    };
+    checkSubscription();
+  }, [user, token]);
+
+  // Check for new notifications
+  useEffect(() => {
+    const checkNewNotifications = async () => {
+      try {
+        const response = await axios.get(`${API}/notifications/latest`);
+        const lastSeen = localStorage.getItem("lastSeenNotification");
+        if (response.data.length > 0 && response.data[0].id !== lastSeen) {
+          setHasNewNotification(true);
+        }
+      } catch (e) {
+        console.error("Error checking notifications:", e);
+      }
+    };
+    checkNewNotifications();
+    const interval = setInterval(checkNewNotifications, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogoClick = () => {
     setClickCount(prev => {
@@ -119,9 +156,15 @@ const Header = ({ onLogoClick }) => {
     });
   };
 
+  const handleBellClick = () => {
+    setHasNewNotification(false);
+    onNotificationClick();
+  };
+
   return (
     <header className="sticky top-0 z-50 glass border-b border-[rgba(212,175,55,0.2)]">
-      <div className="flex items-center justify-center py-4 px-4">
+      <div className="flex items-center justify-between py-4 px-4 max-w-lg mx-auto">
+        <div className="w-10"></div>
         <button 
           onClick={handleLogoClick}
           className="flex items-center gap-2 select-none"
@@ -132,6 +175,16 @@ const Header = ({ onLogoClick }) => {
             THE 2.5 SYNDICATE
           </h1>
           <CrownIcon className="w-6 h-6 text-[var(--gold)] crown-icon" />
+        </button>
+        <button
+          onClick={handleBellClick}
+          className="relative p-2 hover:bg-[var(--charcoal-lighter)] rounded-full transition-colors"
+          data-testid="notification-bell"
+        >
+          <Bell className={`w-5 h-5 ${isSubscribed ? 'text-[var(--gold)]' : 'text-[var(--text-secondary)]'}`} />
+          {hasNewNotification && (
+            <span className="absolute top-1 right-1 w-2 h-2 bg-[var(--error)] rounded-full animate-pulse"></span>
+          )}
         </button>
       </div>
     </header>
