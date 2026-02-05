@@ -1141,22 +1141,108 @@ const AdminPanel = ({ onClose }) => {
         
         <ScrollArea className="max-h-[70vh] pr-4">
           <div className="space-y-4">
-            {/* Telegram Import Section */}
+            {/* Paste Import Section - QUICK BULK IMPORT */}
             <div className="vip-card p-4">
-              <div className="flex items-center justify-between mb-3">
+              <button
+                onClick={() => setShowPasteImport(!showPasteImport)}
+                className="flex items-center justify-between w-full"
+              >
                 <div className="flex items-center gap-2">
                   <Download className="w-5 h-5 text-[var(--gold)]" />
-                  <span className="text-white font-medium">Import from Telegram</span>
+                  <span className="text-white font-medium">Quick Bulk Import (Paste)</span>
+                </div>
+                <span className="text-[var(--gold)]">{showPasteImport ? '▼' : '▶'}</span>
+              </button>
+              
+              {showPasteImport && (
+                <div className="mt-4 space-y-3">
+                  <p className="text-[var(--text-secondary)] text-sm">
+                    Copy all your Telegram messages and paste below. Works with your format:
+                  </p>
+                  <pre className="text-xs text-[var(--text-muted)] bg-[var(--charcoal-lighter)] p-2 rounded">
+{`Marseille v Rennes
+⚽ Over 1.5 Goals ✅✅✅
+📈 Points - 5
+📦 Odds - 1.11`}
+                  </pre>
+                  <Textarea
+                    value={pasteText}
+                    onChange={(e) => setPasteText(e.target.value)}
+                    placeholder="Paste all your Telegram messages here..."
+                    className="bg-[var(--charcoal-light)] border-[var(--charcoal-lighter)] text-white min-h-[150px] text-sm"
+                    data-testid="paste-import-textarea"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={parsePastedText}
+                      disabled={importing || !pasteText.trim()}
+                      className="btn-gold flex-1"
+                      data-testid="parse-paste-btn"
+                    >
+                      Parse Results
+                    </Button>
+                    {pastePreview.length > 0 && (
+                      <Button
+                        onClick={() => { setPastePreview([]); setPasteText(""); }}
+                        variant="outline"
+                        className="border-[var(--error)] text-[var(--error)]"
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {pastePreview.length > 0 && (
+                    <div className="space-y-2 mt-3">
+                      <p className="text-[var(--success)] text-sm font-medium">✅ Found {pastePreview.length} results:</p>
+                      <div className="max-h-40 overflow-y-auto space-y-1">
+                        {pastePreview.map((bet, i) => (
+                          <div key={i} className="bg-[var(--charcoal-lighter)] p-2 rounded text-sm flex items-center justify-between">
+                            <span className="text-white">{bet.home_team} v {bet.away_team}</span>
+                            <div>
+                              <span className="text-[var(--gold)] mr-2">{bet.bet_type}</span>
+                              <span className={bet.is_won ? 'text-[var(--success)]' : 'text-[var(--error)]'}>
+                                {bet.is_won ? '✅' : '❌'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        onClick={importPastedResults}
+                        disabled={importing}
+                        className="btn-gold w-full"
+                        data-testid="import-paste-btn"
+                      >
+                        {importing ? (
+                          <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Importing...</>
+                        ) : (
+                          <><Download className="w-4 h-4 mr-2" /> Import {pastePreview.length} Results</>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Auto Telegram Import Section */}
+            <div className="bet-card p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="w-5 h-5 text-[var(--text-secondary)]" />
+                  <span className="text-[var(--text-secondary)] font-medium">Auto Import (New Messages)</span>
                 </div>
                 <Button
                   onClick={fetchTelegramUpdates}
                   disabled={importing}
                   size="sm"
-                  className="btn-gold"
+                  variant="outline"
+                  className="border-[var(--charcoal-lighter)]"
                   data-testid="fetch-telegram-btn"
                 >
                   {importing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                  <span className="ml-2">{importing ? "Loading..." : "Fetch"}</span>
+                  <span className="ml-2">Fetch</span>
                 </Button>
               </div>
               
