@@ -1539,11 +1539,19 @@ const AdminPanel = ({ onClose }) => {
                     <div>
                       <Label className="text-[var(--text-secondary)] text-xs">Points</Label>
                       <Input
-                        type="number"
-                        min="1"
-                        max="10"
+                        type="text"
                         value={quickResult.stake}
-                        onChange={(e) => setQuickResult({...quickResult, stake: parseInt(e.target.value) || 5})}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === '' || /^[0-9]*$/.test(val)) {
+                            setQuickResult({...quickResult, stake: val});
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const num = parseInt(e.target.value);
+                          setQuickResult({...quickResult, stake: isNaN(num) ? 5 : Math.min(Math.max(num, 1), 10)});
+                        }}
+                        placeholder="5"
                         className="text-sm"
                         data-testid="quick-stake"
                       />
