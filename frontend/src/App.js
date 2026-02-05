@@ -2506,11 +2506,120 @@ const AppLayout = () => {
   );
 };
 
+// Age Verification Gate
+const AgeVerificationGate = ({ children }) => {
+  const [verified, setVerified] = useState(() => {
+    return localStorage.getItem('ageVerified') === 'true';
+  });
+  const [declined, setDeclined] = useState(false);
+
+  const handleVerify = () => {
+    localStorage.setItem('ageVerified', 'true');
+    setVerified(true);
+  };
+
+  const handleDecline = () => {
+    setDeclined(true);
+  };
+
+  if (declined) {
+    return (
+      <div className="min-h-screen bg-[var(--obsidian)] flex items-center justify-center p-4">
+        <div className="bet-card p-8 max-w-md text-center">
+          <div className="w-20 h-20 rounded-full bg-[var(--error)]/20 flex items-center justify-center mx-auto mb-6">
+            <X className="w-10 h-10 text-[var(--error)]" />
+          </div>
+          <h2 className="font-display text-2xl text-white mb-4">Access Denied</h2>
+          <p className="text-[var(--text-secondary)] mb-6">
+            You must be 18 years or older to access this application. This app contains content related to sports predictions and analysis.
+          </p>
+          <p className="text-[var(--text-muted)] text-sm">
+            If you believe this is an error, please close and reopen the app.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!verified) {
+    return (
+      <div className="min-h-screen bg-[var(--obsidian)] flex items-center justify-center p-4">
+        <div className="vip-card p-8 max-w-md">
+          {/* Logo */}
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <CrownIcon className="w-8 h-8 text-[var(--gold)]" />
+            <h1 className="font-display text-2xl font-semibold text-white">THE 2.5 SYNDICATE</h1>
+          </div>
+          
+          {/* Age Badge */}
+          <div className="flex justify-center mb-6">
+            <div className="w-24 h-24 rounded-full bg-[var(--error)] flex items-center justify-center">
+              <span className="text-white font-bold text-3xl">18+</span>
+            </div>
+          </div>
+          
+          <h2 className="font-display text-xl text-[var(--gold)] text-center mb-4">
+            Age Verification Required
+          </h2>
+          
+          <p className="text-[var(--text-secondary)] text-center mb-6 text-sm leading-relaxed">
+            This application contains content related to sports predictions and betting analysis. 
+            You must be at least <strong className="text-white">18 years old</strong> (or the legal age in your jurisdiction) to access this content.
+          </p>
+          
+          <div className="bg-[var(--charcoal-lighter)] rounded-lg p-4 mb-6">
+            <p className="text-[var(--text-muted)] text-xs leading-relaxed">
+              By clicking "I am 18 or older", you confirm that:
+            </p>
+            <ul className="text-[var(--text-muted)] text-xs mt-2 space-y-1">
+              <li>• You are at least 18 years of age</li>
+              <li>• You understand this app provides sports analysis only</li>
+              <li>• You agree to our Terms of Service and Privacy Policy</li>
+              <li>• You will gamble responsibly if you choose to bet</li>
+            </ul>
+          </div>
+          
+          <div className="space-y-3">
+            <Button 
+              onClick={handleVerify}
+              className="btn-gold w-full py-6 text-lg"
+              data-testid="age-verify-btn"
+            >
+              <Check className="w-5 h-5 mr-2" />
+              I am 18 or older
+            </Button>
+            
+            <Button 
+              onClick={handleDecline}
+              variant="outline"
+              className="w-full border-[var(--charcoal-lighter)] text-[var(--text-secondary)] hover:bg-[var(--charcoal-lighter)]"
+              data-testid="age-decline-btn"
+            >
+              I am under 18
+            </Button>
+          </div>
+          
+          <p className="text-[var(--text-muted)] text-xs text-center mt-6">
+            Please gamble responsibly. If you have a gambling problem, visit{' '}
+            <a href="https://www.begambleaware.org" target="_blank" rel="noopener noreferrer" className="text-[var(--gold)] underline">
+              BeGambleAware.org
+            </a>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return children;
+};
+
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <AppLayout />
+        <AgeVerificationGate>
+          <AppLayout />
+        </AgeVerificationGate>
         <Toaster 
           position="top-center" 
           toastOptions={{
