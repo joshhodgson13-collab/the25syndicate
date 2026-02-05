@@ -905,6 +905,132 @@ const AdminPanel = ({ onClose }) => {
     }
   };
 
+  const [pasteText, setPasteText] = useState("");
+  const [showPasteImport, setShowPasteImport] = useState(false);
+  const [pastePreview, setPastePreview] = useState([]);
+
+  const parsePastedText = () => {
+    if (!pasteText.trim()) {
+      toast.error("Please paste your Telegram messages first");
+      return;
+    }
+    
+    // Split by common message separators
+    const blocks = pasteText.split(/\n\n+|\n(?=[A-Z][a-z]+ v [A-Z])/);
+    const parsed = [];
+    
+    for (const block of blocks) {
+      if (block.trim().length < 10) continue;
+      
+      // Try to parse each block as a bet
+      const lines = block.trim().split('\n');
+      let home_team = "", away_team = "", bet_type = "", stake = 5, odds = 1.80, is_won = null;
+      
+      for (const line of lines) {
+        const trimmed = line.trim();
+        
+        // Match line
+        if (trimmed.includes(' v ') && !trimmed.startsWith('⚽') && !trimmed.includes('Points') && !trimmed.includes('Odds')) {
+          const teams = trimmed.split(' v ');
+          if (teams.length === 2) {
+            home_team = teams[0].trim();
+            away_team = teams[1].trim();
+          }
+        }
+        
+        // Bet type
+        if (trimmed.includes('Over 2.5') || trimmed.includes('over 2.5')) bet_type = "Over 2.5";
+        else if (trimmed.includes('Under 2.5') || trimmed.includes('under 2.5')) bet_type = "Under 2.5";
+        else if (trimmed.includes('Over 1.5') || trimmed.includes('over 1.5')) bet_type = "Over 1.5";
+        else if (trimmed.includes('Under 1.5') || trimmed.includes('under 1.5')) bet_type = "Under 1.5";
+        else if (trimmed.includes('Over 3.5') || trimmed.includes('over 3.5')) bet_type = "Over 3.5";
+        else if (trimmed.toUpperCase().includes('BTTS')) bet_type = trimmed.includes('Yes') ? "BTTS Yes" : "BTTS No";
+        
+        // Win/Loss
+        if (trimmed.includes('✅')) is_won = true;
+        if (trimmed.includes('❌')) is_won = false;
+        if (trimmed.includes('Full House') || trimmed.includes('WIN') || trimmed.includes('Won')) is_won = true;
+        if (trimmed.includes('LOSS') || trimmed.includes('Lost')) is_won = false;
+        
+        // Points/Stake
+        if (trimmed.includes('Points') || trimmed.includes('📈')) {
+          const match = trimmed.match(/(\d+)/);
+          if (match) stake = Math.min(parseInt(match[1]), 10);
+        }
+        
+        // Odds
+        if (trimmed.includes('Odds') || trimmed.includes('📦')) {
+          const match = trimmed.match(/(\d+\.?\d*)/);
+          if (match) odds = parseFloat(match[1]);
+        }
+      }
+      
+      if (home_team && away_team && bet_type && is_won !== null) {
+        parsed.push({ home_team, away_team, bet_type, stake, odds, is_won });
+      }
+    }
+    
+    if (parsed.length === 0) {
+      toast.error("Could not parse any results. Check the format.");
+    } else {
+      setPastePreview(parsed);
+      toast.success(`Found ${parsed.length} results to import`);
+    }
+  };
+
+  const importPastedResults = async () => {
+    if (pastePreview.length === 0) {
+      toast.error("No results to import");
+      return;
+    }
+    
+    setImporting(true);
+    let imported = 0;
+    
+    try {
+      for (const bet of pastePreview) {
+        const now = new Date();
+        const betData = {
+          home_team: bet.home_team,
+          away_team: bet.away_team,
+          league: "Imported",
+          bet_type: bet.bet_type,
+          odds: bet.odds,
+          stake: bet.stake,
+          kick_off: now.toISOString(),
+          is_vip: false
+        };
+        
+        // Create bet then update status
+        const response = await axios.post(`${API}/admin/bets`, betData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        // Update to won/lost
+        await axios.put(`${API}/admin/bets/${response.data.id}`, {
+          status: bet.is_won ? "won" : "lost",
+          home_score: null,
+          away_score: null
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        imported++;
+      }
+      
+      toast.success(`Successfully imported ${imported} results!`);
+      setPasteText("");
+      setPastePreview([]);
+      setShowPasteImport(false);
+      fetchBets();
+    } catch (e) {
+      toast.error(`Imported ${imported} results, then error: ${e.message}`);
+      console.error(e);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const handleAddBet = async (e) => {
     e.preventDefault();
     try {
