@@ -374,18 +374,26 @@ const AdLockedBet = ({ bet, index }) => {
     return (
       <div className="bet-card p-4 animate-fade-in" data-testid={`ad-overlay-${bet.id}`}>
         <div className="text-center mb-4">
-          <p className="text-[var(--gold)] font-semibold mb-2">Watch Ad to Reveal Tip</p>
+          <p className="text-[var(--gold)] font-semibold mb-2">Revealing Tip...</p>
           <div className="flex items-center justify-center gap-2 text-white">
             <Clock className="w-4 h-4" />
             <span className="font-mono text-xl">{countdown}s</span>
           </div>
         </div>
         
-        {/* AdSense Ad Unit */}
-        <div className="bg-[var(--charcoal-lighter)] rounded-lg p-2 min-h-[250px] flex items-center justify-center">
+        {/* VIP Promo / Ad placeholder */}
+        <div className="bg-gradient-to-br from-[var(--charcoal-lighter)] to-[var(--charcoal)] rounded-lg p-6 min-h-[200px] flex flex-col items-center justify-center border border-[var(--gold)]/30">
+          <Crown className="w-12 h-12 text-[var(--gold)] mb-4" />
+          <h3 className="text-[var(--gold)] font-display text-xl mb-2">Go VIP</h3>
+          <p className="text-[var(--text-secondary)] text-center text-sm mb-3">
+            Skip ads & get exclusive premium tips
+          </p>
+          <p className="text-white font-bold text-lg">Only £9.99/month</p>
+          
+          {/* AdSense Ad Unit - will show when approved */}
           <ins 
             className="adsbygoogle"
-            style={{ display: 'block', width: '100%', height: '250px' }}
+            style={{ display: 'block', width: '100%', maxHeight: '100px', overflow: 'hidden' }}
             data-ad-client={ADSENSE_CLIENT}
             data-ad-slot="auto"
             data-ad-format="auto"
