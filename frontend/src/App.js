@@ -919,54 +919,128 @@ const AdminPanel = ({ onClose }) => {
     const blocks = pasteText.split(/\n\n+|\n(?=[A-Z][a-z]+ v [A-Z])/);
     const parsed = [];
     
+    let currentMatch = { home_team: "", away_team: "" };
+    
     for (const block of blocks) {
-      if (block.trim().length < 10) continue;
+      if (block.trim().length < 5) continue;
       
-      // Try to parse each block as a bet
       const lines = block.trim().split('\n');
-      let home_team = "", away_team = "", bet_type = "", stake = 5, odds = 1.80, is_won = null;
       
       for (const line of lines) {
         const trimmed = line.trim();
         
+        // Match line - look for " v " with team names (strip emojis)
+        if (trimmed.includes(' v ') && !trimmed.includes('goals') && !trimmed.includes('Goals') && !trimmed.includes('Points') && !trimmed.includes('Odds')) {
+          // Remove emojis and clean up team names
+          const cleanLine = trimmed.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|🔴|⚪️|🔵|⚫|🟡|🟢|🟣|🟠|⚪|🏴|🏳/gu, '').trim();
+          const teams = cleanLine.split(' v ');
+          if (teams.length === 2 && teams[0].trim() && teams[1].trim()) {
+            currentMatch = {
+              home_team: teams[0].trim(),
+              away_team: teams[1].trim()
+            };
+          }
+        }
+        
+        // Check if this line has a bet with result (contains goals + ✅ or ❌)
+        if ((trimmed.includes('goals') || trimmed.includes('Goals')) && (trimmed.includes('✅') || trimmed.includes('❌'))) {
+          let bet_type = "";
+          let is_won = trimmed.includes('✅');
+          
+          // Extract bet type
+          if (trimmed.toLowerCase().includes('over 2.5')) bet_type = "Over 2.5";
+          else if (trimmed.toLowerCase().includes('under 2.5')) bet_type = "Under 2.5";
+          else if (trimmed.toLowerCase().includes('over 1.5')) bet_type = "Over 1.5";
+          else if (trimmed.toLowerCase().includes('under 1.5')) bet_type = "Under 1.5";
+          else if (trimmed.toLowerCase().includes('over 3.5')) bet_type = "Over 3.5";
+          else if (trimmed.toLowerCase().includes('under 3.5')) bet_type = "Under 3.5";
+          else if (trimmed.toLowerCase().includes('over 0.5')) bet_type = "Over 0.5";
+          else if (trimmed.toUpperCase().includes('BTTS')) bet_type = "BTTS Yes";
+          
+          if (bet_type && currentMatch.home_team && currentMatch.away_team) {
+            // Look for stake and odds in following lines
+            let stake = 5;
+            let odds = 1.80;
+            
+            // Search in the current block for Points and Odds
+            for (const searchLine of lines) {
+              if (searchLine.includes('Points') || searchLine.includes('📈')) {
+                const match = searchLine.match(/(\d+)/);
+                if (match) stake = Math.min(parseInt(match[1]), 10);
+              }
+              if (searchLine.includes('Odds') || searchLine.includes('📦')) {
+                const match = searchLine.match(/(\d+\.?\d*)/);
+                if (match) odds = parseFloat(match[1]);
+              }
+            }
+            
+            parsed.push({
+              home_team: currentMatch.home_team,
+              away_team: currentMatch.away_team,
+              bet_type,
+              stake,
+              odds,
+              is_won
+            });
+          }
+        }
+      }
+    }
+    
+    // Also try parsing as individual bet blocks (alternative format)
+    if (parsed.length === 0) {
+      let home_team = "", away_team = "";
+      
+      const allLines = pasteText.split('\n');
+      for (let i = 0; i < allLines.length; i++) {
+        const line = allLines[i].trim();
+        
         // Match line
-        if (trimmed.includes(' v ') && !trimmed.startsWith('⚽') && !trimmed.includes('Points') && !trimmed.includes('Odds')) {
-          const teams = trimmed.split(' v ');
+        if (line.includes(' v ') && !line.toLowerCase().includes('goals') && !line.includes('Points') && !line.includes('Odds')) {
+          const cleanLine = line.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|🔴|⚪️|🔵|⚫|🟡|🟢|🟣|🟠|⚪|🏴|🏳/gu, '').trim();
+          const teams = cleanLine.split(' v ');
           if (teams.length === 2) {
             home_team = teams[0].trim();
             away_team = teams[1].trim();
           }
         }
         
-        // Bet type
-        if (trimmed.includes('Over 2.5') || trimmed.includes('over 2.5')) bet_type = "Over 2.5";
-        else if (trimmed.includes('Under 2.5') || trimmed.includes('under 2.5')) bet_type = "Under 2.5";
-        else if (trimmed.includes('Over 1.5') || trimmed.includes('over 1.5')) bet_type = "Over 1.5";
-        else if (trimmed.includes('Under 1.5') || trimmed.includes('under 1.5')) bet_type = "Under 1.5";
-        else if (trimmed.includes('Over 3.5') || trimmed.includes('over 3.5')) bet_type = "Over 3.5";
-        else if (trimmed.toUpperCase().includes('BTTS')) bet_type = trimmed.includes('Yes') ? "BTTS Yes" : "BTTS No";
-        
-        // Win/Loss
-        if (trimmed.includes('✅')) is_won = true;
-        if (trimmed.includes('❌')) is_won = false;
-        if (trimmed.includes('Full House') || trimmed.includes('WIN') || trimmed.includes('Won')) is_won = true;
-        if (trimmed.includes('LOSS') || trimmed.includes('Lost')) is_won = false;
-        
-        // Points/Stake
-        if (trimmed.includes('Points') || trimmed.includes('📈')) {
-          const match = trimmed.match(/(\d+)/);
-          if (match) stake = Math.min(parseInt(match[1]), 10);
+        // Bet line with result
+        if (line.toLowerCase().includes('goals') && (line.includes('✅') || line.includes('❌'))) {
+          let bet_type = "";
+          if (line.toLowerCase().includes('over 2.5')) bet_type = "Over 2.5";
+          else if (line.toLowerCase().includes('under 2.5')) bet_type = "Under 2.5";
+          else if (line.toLowerCase().includes('over 1.5')) bet_type = "Over 1.5";
+          else if (line.toLowerCase().includes('under 1.5')) bet_type = "Under 1.5";
+          else if (line.toLowerCase().includes('over 3.5')) bet_type = "Over 3.5";
+          else if (line.toLowerCase().includes('over 0.5')) bet_type = "Over 0.5";
+          
+          if (bet_type && home_team && away_team) {
+            let stake = 5, odds = 1.80;
+            
+            // Look ahead for stake and odds
+            for (let j = i + 1; j < Math.min(i + 4, allLines.length); j++) {
+              const nextLine = allLines[j];
+              if (nextLine.includes('Points') || nextLine.includes('📈')) {
+                const match = nextLine.match(/(\d+)/);
+                if (match) stake = Math.min(parseInt(match[1]), 10);
+              }
+              if (nextLine.includes('Odds') || nextLine.includes('📦')) {
+                const match = nextLine.match(/(\d+\.?\d*)/);
+                if (match) odds = parseFloat(match[1]);
+              }
+            }
+            
+            parsed.push({
+              home_team,
+              away_team,
+              bet_type,
+              stake,
+              odds,
+              is_won: line.includes('✅')
+            });
+          }
         }
-        
-        // Odds
-        if (trimmed.includes('Odds') || trimmed.includes('📦')) {
-          const match = trimmed.match(/(\d+\.?\d*)/);
-          if (match) odds = parseFloat(match[1]);
-        }
-      }
-      
-      if (home_team && away_team && bet_type && is_won !== null) {
-        parsed.push({ home_team, away_team, bet_type, stake, odds, is_won });
       }
     }
     
