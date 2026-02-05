@@ -966,7 +966,7 @@ const AdminPanel = ({ onClose }) => {
         const trimmed = line.trim();
         
         // Match line - look for " v " with team names (strip emojis)
-        if (trimmed.includes(' v ') && !trimmed.includes('goals') && !trimmed.includes('Goals') && !trimmed.includes('Points') && !trimmed.includes('Odds')) {
+        if (trimmed.includes(' v ') && !trimmed.toLowerCase().includes('goals') && !trimmed.toLowerCase().includes('win') && !trimmed.includes('Points') && !trimmed.includes('Odds')) {
           // Remove emojis and clean up team names
           const cleanLine = trimmed.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|🔴|⚪️|🔵|⚫|🟡|🟢|🟣|🟠|⚪|🏴|🏳/gu, '').trim();
           const teams = cleanLine.split(' v ');
@@ -978,12 +978,23 @@ const AdminPanel = ({ onClose }) => {
           }
         }
         
-        // Check if this line has a bet with result (contains goals + ✅ or ❌)
-        if ((trimmed.includes('goals') || trimmed.includes('Goals')) && (trimmed.includes('✅') || trimmed.includes('❌'))) {
+        // Check if this line has a bet with result (contains bet type + ✅ or ❌)
+        const hasBetResult = (trimmed.includes('✅') || trimmed.includes('❌'));
+        const hasBetType = trimmed.toLowerCase().includes('goals') || 
+                          trimmed.toLowerCase().includes('over') || 
+                          trimmed.toLowerCase().includes('under') ||
+                          trimmed.toLowerCase().includes('btts') ||
+                          trimmed.toLowerCase().includes('home win') ||
+                          trimmed.toLowerCase().includes('away win') ||
+                          trimmed.toLowerCase().includes('draw') ||
+                          trimmed.toLowerCase().includes('clean sheet') ||
+                          trimmed.toLowerCase().includes('both teams');
+        
+        if (hasBetResult && hasBetType) {
           let bet_type = "";
           let is_won = trimmed.includes('✅');
           
-          // Extract bet type
+          // Extract bet type - goals
           if (trimmed.toLowerCase().includes('over 2.5')) bet_type = "Over 2.5";
           else if (trimmed.toLowerCase().includes('under 2.5')) bet_type = "Under 2.5";
           else if (trimmed.toLowerCase().includes('over 1.5')) bet_type = "Over 1.5";
@@ -991,7 +1002,16 @@ const AdminPanel = ({ onClose }) => {
           else if (trimmed.toLowerCase().includes('over 3.5')) bet_type = "Over 3.5";
           else if (trimmed.toLowerCase().includes('under 3.5')) bet_type = "Under 3.5";
           else if (trimmed.toLowerCase().includes('over 0.5')) bet_type = "Over 0.5";
-          else if (trimmed.toUpperCase().includes('BTTS')) bet_type = "BTTS Yes";
+          // Match results
+          else if (trimmed.toLowerCase().includes('home win')) bet_type = "Home Win";
+          else if (trimmed.toLowerCase().includes('away win')) bet_type = "Away Win";
+          else if (trimmed.toLowerCase().includes('draw')) bet_type = "Draw";
+          // BTTS
+          else if (trimmed.toLowerCase().includes('btts yes') || (trimmed.toLowerCase().includes('btts') && !trimmed.toLowerCase().includes('no'))) bet_type = "BTTS Yes";
+          else if (trimmed.toLowerCase().includes('btts no')) bet_type = "BTTS No";
+          else if (trimmed.toLowerCase().includes('both teams to score')) bet_type = "BTTS Yes";
+          // Clean sheet
+          else if (trimmed.toLowerCase().includes('clean sheet')) bet_type = "Clean Sheet";
           
           if (bet_type && currentMatch.home_team && currentMatch.away_team) {
             // Look for stake and odds in following lines
@@ -1032,7 +1052,7 @@ const AdminPanel = ({ onClose }) => {
         const line = allLines[i].trim();
         
         // Match line
-        if (line.includes(' v ') && !line.toLowerCase().includes('goals') && !line.includes('Points') && !line.includes('Odds')) {
+        if (line.includes(' v ') && !line.toLowerCase().includes('goals') && !line.toLowerCase().includes('win') && !line.includes('Points') && !line.includes('Odds')) {
           const cleanLine = line.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|🔴|⚪️|🔵|⚫|🟡|🟢|🟣|🟠|⚪|🏴|🏳/gu, '').trim();
           const teams = cleanLine.split(' v ');
           if (teams.length === 2) {
@@ -1042,7 +1062,18 @@ const AdminPanel = ({ onClose }) => {
         }
         
         // Bet line with result
-        if (line.toLowerCase().includes('goals') && (line.includes('✅') || line.includes('❌'))) {
+        const hasBetResult = (line.includes('✅') || line.includes('❌'));
+        const hasBetType = line.toLowerCase().includes('goals') || 
+                          line.toLowerCase().includes('over') || 
+                          line.toLowerCase().includes('under') ||
+                          line.toLowerCase().includes('btts') ||
+                          line.toLowerCase().includes('home win') ||
+                          line.toLowerCase().includes('away win') ||
+                          line.toLowerCase().includes('draw') ||
+                          line.toLowerCase().includes('clean sheet') ||
+                          line.toLowerCase().includes('both teams');
+        
+        if (hasBetResult && hasBetType) {
           let bet_type = "";
           if (line.toLowerCase().includes('over 2.5')) bet_type = "Over 2.5";
           else if (line.toLowerCase().includes('under 2.5')) bet_type = "Under 2.5";
@@ -1050,6 +1081,13 @@ const AdminPanel = ({ onClose }) => {
           else if (line.toLowerCase().includes('under 1.5')) bet_type = "Under 1.5";
           else if (line.toLowerCase().includes('over 3.5')) bet_type = "Over 3.5";
           else if (line.toLowerCase().includes('over 0.5')) bet_type = "Over 0.5";
+          else if (line.toLowerCase().includes('home win')) bet_type = "Home Win";
+          else if (line.toLowerCase().includes('away win')) bet_type = "Away Win";
+          else if (line.toLowerCase().includes('draw')) bet_type = "Draw";
+          else if (line.toLowerCase().includes('btts yes') || (line.toLowerCase().includes('btts') && !line.toLowerCase().includes('no'))) bet_type = "BTTS Yes";
+          else if (line.toLowerCase().includes('btts no')) bet_type = "BTTS No";
+          else if (line.toLowerCase().includes('both teams to score')) bet_type = "BTTS Yes";
+          else if (line.toLowerCase().includes('clean sheet')) bet_type = "Clean Sheet";
           
           if (bet_type && home_team && away_team) {
             let stake = 5, odds = 1.80;
