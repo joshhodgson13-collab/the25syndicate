@@ -486,6 +486,78 @@ async def get_stats():
         "win_rate": win_rate
     }
 
+# ============ NOTIFICATION ROUTES ============
+
+@api_router.post("/notifications/subscribe")
+async def subscribe_to_notifications(subscription: NotificationSubscription, user: dict = Depends(get_current_user)):
+    """Subscribe user to push notifications"""
+    await db.notification_subscriptions.update_one(
+        {"user_id": user["id"]},
+        {
+            "$set": {
+                "user_id": user["id"],
+                "endpoint": subscription.endpoint,
+                "keys": subscription.keys,
+                "subscribed_at": datetime.now(timezone.utc).isoformat()
+            }
+        },
+        upsert=True
+    )
+    return {"success": True, "message": "Subscribed to notifications"}
+
+@api_router.delete("/notifications/unsubscribe")
+async def unsubscribe_from_notifications(user: dict = Depends(get_current_user)):
+    """Unsubscribe user from push notifications"""
+    await db.notification_subscriptions.delete_one({"user_id": user["id"]})
+    return {"success": True, "message": "Unsubscribed from notifications"}
+
+@api_router.get("/notifications/status")
+async def get_notification_status(user: dict = Depends(get_current_user)):
+    """Check if user is subscribed to notifications"""
+    subscription = await db.notification_subscriptions.find_one({"user_id": user["id"]})
+    return {"subscribed": subscription is not None}
+
+@api_router.post("/admin/notifications/send", response_model=NotificationResponse)
+async def send_notification(notification: NotificationCreate, user: dict = Depends(get_admin_user)):
+    """Send notification to all subscribed users (admin only)"""
+    notification_id = str(uuid.uuid4())
+    
+    # Store the notification
+    notification_doc = {
+        "id": notification_id,
+        "title": notification.title,
+        "body": notification.body,
+        "notification_type": notification.notification_type,
+        "sent_at": datetime.now(timezone.utc).isoformat(),
+        "sent_by": user["id"]
+    }
+    await db.notifications.insert_one(notification_doc)
+    
+    # Get all subscribed users count
+    subscriber_count = await db.notification_subscriptions.count_documents({})
+    
+    logger.info(f"Notification sent to {subscriber_count} subscribers: {notification.title}")
+    
+    return NotificationResponse(**{k: v for k, v in notification_doc.items() if k != '_id'})
+
+@api_router.get("/admin/notifications", response_model=List[NotificationResponse])
+async def get_sent_notifications(user: dict = Depends(get_admin_user)):
+    """Get list of sent notifications (admin only)"""
+    notifications = await db.notifications.find({}, {"_id": 0}).sort("sent_at", -1).to_list(50)
+    return [NotificationResponse(**n) for n in notifications]
+
+@api_router.get("/notifications/latest")
+async def get_latest_notifications():
+    """Get latest notifications for display"""
+    notifications = await db.notifications.find({}, {"_id": 0}).sort("sent_at", -1).to_list(10)
+    return notifications
+
+@api_router.get("/admin/notifications/subscribers")
+async def get_subscriber_count(user: dict = Depends(get_admin_user)):
+    """Get count of notification subscribers (admin only)"""
+    count = await db.notification_subscriptions.count_documents({})
+    return {"subscriber_count": count}
+
 # ============ BASIC ROUTES ============
 
 @api_router.get("/")
