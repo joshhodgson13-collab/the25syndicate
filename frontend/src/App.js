@@ -1,9 +1,9 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, createContext, useContext, useCallback } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { Toaster, toast } from "sonner";
-import { Home, Star, FileText, Mail, User, Crown, Lock, LogOut, Plus, Trash2, Check, X, Clock, Trophy, Target, Bell, BellOff, Send, Users, Download, RefreshCw } from "lucide-react";
+import { Home, Star, FileText, Mail, User, Crown, Lock, LogOut, Plus, Trash2, Check, X, Clock, Trophy, Target, Bell, BellOff, Send, Users, Download, RefreshCw, Play, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+// AdSense Publisher ID
+const ADSENSE_CLIENT = "ca-pub-6120249761604995";
 
 // Auth Context
 const AuthContext = createContext(null);
