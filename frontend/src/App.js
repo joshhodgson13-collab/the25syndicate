@@ -305,6 +305,138 @@ const BetCard = ({ bet, showResult = false }) => {
   );
 };
 
+// Ad Locked Bet Component
+const AdLockedBet = ({ bet, index }) => {
+  const [isLocked, setIsLocked] = useState(true);
+  const [showingAd, setShowingAd] = useState(false);
+  const [countdown, setCountdown] = useState(15);
+  const [adLoaded, setAdLoaded] = useState(false);
+  
+  // Check localStorage for previously unlocked bets
+  useEffect(() => {
+    const unlockedBets = JSON.parse(localStorage.getItem('unlockedBets') || '[]');
+    if (unlockedBets.includes(bet.id)) {
+      setIsLocked(false);
+    }
+  }, [bet.id]);
+  
+  // Countdown timer when showing ad
+  useEffect(() => {
+    let timer;
+    if (showingAd && countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    } else if (showingAd && countdown === 0) {
+      // Ad finished - unlock the bet
+      setShowingAd(false);
+      setIsLocked(false);
+      // Save to localStorage
+      const unlockedBets = JSON.parse(localStorage.getItem('unlockedBets') || '[]');
+      if (!unlockedBets.includes(bet.id)) {
+        unlockedBets.push(bet.id);
+        localStorage.setItem('unlockedBets', JSON.stringify(unlockedBets));
+      }
+    }
+    return () => clearTimeout(timer);
+  }, [showingAd, countdown, bet.id]);
+  
+  // Load AdSense ad
+  useEffect(() => {
+    if (showingAd && !adLoaded) {
+      try {
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+        setAdLoaded(true);
+      } catch (e) {
+        console.log('AdSense error:', e);
+      }
+    }
+  }, [showingAd, adLoaded]);
+  
+  const startWatchingAd = () => {
+    setShowingAd(true);
+    setCountdown(15);
+    setAdLoaded(false);
+  };
+  
+  // Show unlocked bet
+  if (!isLocked) {
+    return <BetCard bet={bet} />;
+  }
+  
+  // Show ad overlay
+  if (showingAd) {
+    return (
+      <div className="bet-card p-4 animate-fade-in" data-testid={`ad-overlay-${bet.id}`}>
+        <div className="text-center mb-4">
+          <p className="text-[var(--gold)] font-semibold mb-2">Watch Ad to Reveal Tip</p>
+          <div className="flex items-center justify-center gap-2 text-white">
+            <Clock className="w-4 h-4" />
+            <span className="font-mono text-xl">{countdown}s</span>
+          </div>
+        </div>
+        
+        {/* AdSense Ad Unit */}
+        <div className="bg-[var(--charcoal-lighter)] rounded-lg p-2 min-h-[250px] flex items-center justify-center">
+          <ins 
+            className="adsbygoogle"
+            style={{ display: 'block', width: '100%', height: '250px' }}
+            data-ad-client={ADSENSE_CLIENT}
+            data-ad-slot="auto"
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+          />
+        </div>
+        
+        <p className="text-[var(--text-muted)] text-xs text-center mt-3">
+          Tip will be revealed when the timer ends
+        </p>
+      </div>
+    );
+  }
+  
+  // Show locked state
+  return (
+    <div className="bet-card p-4 animate-fade-in relative overflow-hidden" data-testid={`locked-bet-${bet.id}`}>
+      {/* Blurred preview */}
+      <div className="filter blur-sm pointer-events-none">
+        <div className="flex justify-between items-start mb-3">
+          <div className="flex-1">
+            <p className="text-[var(--text-secondary)] text-xs uppercase tracking-wider mb-1">
+              {bet.league}
+            </p>
+            <h3 className="font-semibold text-white text-lg">
+              {bet.home_team} vs {bet.away_team}
+            </h3>
+          </div>
+        </div>
+        <div className="flex justify-between items-end">
+          <div>
+            <p className="text-[var(--gold)] font-semibold text-lg mb-2">????????</p>
+            <p className="text-[var(--text-secondary)] text-sm">Points: ?</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[var(--text-muted)] text-xs">Odds</p>
+            <p className="text-[var(--gold)] font-bold text-xl">?.??</p>
+          </div>
+        </div>
+      </div>
+      
+      {/* Lock overlay */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--obsidian)]/80">
+        <Lock className="w-8 h-8 text-[var(--gold)] mb-3" />
+        <p className="text-white font-medium mb-3">Tip #{index + 1} Locked</p>
+        <Button 
+          onClick={startWatchingAd}
+          className="btn-gold"
+          data-testid={`watch-ad-btn-${bet.id}`}
+        >
+          <Play className="w-4 h-4 mr-2" />
+          Watch Ad to Reveal
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 // Home Page
 const HomePage = () => {
   const [bets, setBets] = useState([]);
