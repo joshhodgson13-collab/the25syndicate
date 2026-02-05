@@ -1188,6 +1188,58 @@ const AdminPanel = ({ onClose }) => {
     }
   };
 
+  const addQuickResult = async () => {
+    if (!quickResult.home_team || !quickResult.away_team || !quickResult.bet_type) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    
+    setImporting(true);
+    try {
+      const now = new Date();
+      const betData = {
+        home_team: quickResult.home_team,
+        away_team: quickResult.away_team,
+        league: "Manual",
+        bet_type: quickResult.bet_type,
+        odds: quickResult.odds,
+        stake: quickResult.stake,
+        kick_off: now.toISOString(),
+        is_vip: false
+      };
+      
+      // Create bet
+      const response = await axios.post(`${API}/admin/bets`, betData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Update to won/lost
+      await axios.put(`${API}/admin/bets/${response.data.id}`, {
+        status: quickResult.status,
+        home_score: null,
+        away_score: null
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      toast.success(`Result added: ${quickResult.home_team} v ${quickResult.away_team} - ${quickResult.status.toUpperCase()}`);
+      setQuickResult({
+        home_team: "",
+        away_team: "",
+        bet_type: "",
+        stake: 5,
+        odds: 1.80,
+        status: "won"
+      });
+      fetchBets();
+    } catch (e) {
+      toast.error("Failed to add result");
+      console.error(e);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const handleAddBet = async (e) => {
     e.preventDefault();
     try {
