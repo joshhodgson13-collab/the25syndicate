@@ -1171,13 +1171,279 @@ const AdminPanel = ({ onClose }) => {
   );
 };
 
+// Notification Panel
+const NotificationPanel = ({ onClose }) => {
+  const { user, token } = useAuth();
+  const [notifications, setNotifications] = useState([]);
+  const [subscriberCount, setSubscriberCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [sendingNotification, setSendingNotification] = useState(false);
+  const [newNotification, setNewNotification] = useState({
+    title: "",
+    body: "",
+    notification_type: "bets_live"
+  });
+
+  useEffect(() => {
+    fetchNotifications();
+    if (user && token) {
+      checkSubscriptionStatus();
+      if (user.is_admin) {
+        fetchSubscriberCount();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, token]);
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await axios.get(`${API}/notifications/latest`);
+      setNotifications(response.data);
+      if (response.data.length > 0) {
+        localStorage.setItem("lastSeenNotification", response.data[0].id);
+      }
+    } catch (e) {
+      console.error("Error fetching notifications:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkSubscriptionStatus = async () => {
+    try {
+      const response = await axios.get(`${API}/notifications/status`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIsSubscribed(response.data.subscribed);
+    } catch (e) {
+      console.error("Error checking subscription:", e);
+    }
+  };
+
+  const fetchSubscriberCount = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/notifications/subscribers`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSubscriberCount(response.data.subscriber_count);
+    } catch (e) {
+      console.error("Error fetching subscriber count:", e);
+    }
+  };
+
+  const toggleSubscription = async () => {
+    if (!user) {
+      toast.error("Please sign in to enable notifications");
+      return;
+    }
+
+    try {
+      if (isSubscribed) {
+        await axios.delete(`${API}/notifications/unsubscribe`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setIsSubscribed(false);
+        toast.success("Unsubscribed from notifications");
+      } else {
+        // For web push, we'd need service worker. For now, we just store subscription intent
+        await axios.post(
+          `${API}/notifications/subscribe`,
+          { endpoint: "web-" + user.id, keys: { auth: "web", p256dh: "web" } },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setIsSubscribed(true);
+        toast.success("Subscribed to notifications!");
+      }
+      if (user.is_admin) {
+        fetchSubscriberCount();
+      }
+    } catch (e) {
+      toast.error("Failed to update subscription");
+      console.error(e);
+    }
+  };
+
+  const sendNotification = async (e) => {
+    e.preventDefault();
+    if (!newNotification.title || !newNotification.body) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    setSendingNotification(true);
+    try {
+      await axios.post(
+        `${API}/admin/notifications/send`,
+        newNotification,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(`Notification sent to ${subscriberCount} subscribers!`);
+      setNewNotification({ title: "", body: "", notification_type: "bets_live" });
+      fetchNotifications();
+    } catch (e) {
+      toast.error("Failed to send notification");
+      console.error(e);
+    } finally {
+      setSendingNotification(false);
+    }
+  };
+
+  const getNotificationTypeLabel = (type) => {
+    switch (type) {
+      case "bets_live": return "🎯 Bets Live";
+      case "results": return "📊 Results";
+      case "custom": return "📢 Announcement";
+      default: return type;
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="bg-[var(--charcoal)] border-[var(--charcoal-lighter)] max-w-md max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle className="text-[var(--gold)] flex items-center gap-2">
+            <Bell className="w-5 h-5" />
+            Notifications
+          </DialogTitle>
+        </DialogHeader>
+        
+        <ScrollArea className="max-h-[70vh] pr-4">
+          <div className="space-y-4">
+            {/* Subscription Toggle */}
+            <div className="bet-card p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white font-medium">Push Notifications</p>
+                  <p className="text-[var(--text-muted)] text-sm">
+                    {isSubscribed ? "You're subscribed" : "Get notified about new tips"}
+                  </p>
+                </div>
+                <Button
+                  onClick={toggleSubscription}
+                  variant={isSubscribed ? "outline" : "default"}
+                  size="sm"
+                  className={isSubscribed ? "border-[var(--gold)] text-[var(--gold)]" : "btn-gold"}
+                  data-testid="toggle-notifications-btn"
+                >
+                  {isSubscribed ? <BellOff className="w-4 h-4 mr-1" /> : <Bell className="w-4 h-4 mr-1" />}
+                  {isSubscribed ? "Unsubscribe" : "Subscribe"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Admin Section */}
+            {user?.is_admin && (
+              <div className="vip-card p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Users className="w-5 h-5 text-[var(--gold)]" />
+                  <span className="text-white font-medium">Admin: Send Notification</span>
+                  <span className="ml-auto text-[var(--gold)] text-sm">{subscriberCount} subscribers</span>
+                </div>
+                
+                <form onSubmit={sendNotification} className="space-y-3">
+                  <div>
+                    <Label className="text-[var(--text-secondary)]">Type</Label>
+                    <Select
+                      value={newNotification.notification_type}
+                      onValueChange={(value) => setNewNotification({...newNotification, notification_type: value})}
+                    >
+                      <SelectTrigger data-testid="notification-type-select">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bets_live">Bets Live</SelectItem>
+                        <SelectItem value="results">Results Update</SelectItem>
+                        <SelectItem value="custom">Custom Announcement</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-[var(--text-secondary)]">Title</Label>
+                    <Input
+                      value={newNotification.title}
+                      onChange={(e) => setNewNotification({...newNotification, title: e.target.value})}
+                      placeholder="e.g., Today's Tips Are Live!"
+                      data-testid="notification-title-input"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label className="text-[var(--text-secondary)]">Message</Label>
+                    <Textarea
+                      value={newNotification.body}
+                      onChange={(e) => setNewNotification({...newNotification, body: e.target.value})}
+                      placeholder="e.g., 3 new selections available for today..."
+                      className="bg-[var(--charcoal-light)] border-[var(--charcoal-lighter)] text-white min-h-[80px]"
+                      data-testid="notification-body-input"
+                    />
+                  </div>
+                  
+                  <Button 
+                    type="submit" 
+                    className="btn-gold w-full" 
+                    disabled={sendingNotification}
+                    data-testid="send-notification-btn"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    {sendingNotification ? "Sending..." : "Send to All Subscribers"}
+                  </Button>
+                </form>
+              </div>
+            )}
+
+            {/* Recent Notifications */}
+            <div>
+              <h3 className="text-white font-medium mb-3">Recent Notifications</h3>
+              {loading ? (
+                <div className="text-center py-4 text-[var(--text-secondary)]">Loading...</div>
+              ) : notifications.length > 0 ? (
+                <div className="space-y-2">
+                  {notifications.map((notification) => (
+                    <div key={notification.id} className="bet-card p-3">
+                      <div className="flex items-start justify-between mb-1">
+                        <span className="text-xs text-[var(--gold)]">
+                          {getNotificationTypeLabel(notification.notification_type)}
+                        </span>
+                        <span className="text-xs text-[var(--text-muted)]">
+                          {new Date(notification.sent_at).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-white font-medium text-sm">{notification.title}</p>
+                      <p className="text-[var(--text-secondary)] text-sm">{notification.body}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bet-card p-4 text-center">
+                  <p className="text-[var(--text-secondary)]">No notifications yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 // Main App Layout
 const AppLayout = () => {
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   return (
     <div className="min-h-screen bg-[var(--obsidian)]">
-      <Header onLogoClick={() => setShowAdmin(true)} />
+      <Header 
+        onLogoClick={() => setShowAdmin(true)} 
+        onNotificationClick={() => setShowNotifications(true)}
+      />
       
       <main className="max-w-lg mx-auto">
         <Routes>
@@ -1192,6 +1458,7 @@ const AppLayout = () => {
       <BottomNav />
       
       {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} />}
+      {showNotifications && <NotificationPanel onClose={() => setShowNotifications(false)} />}
     </div>
   );
 };
