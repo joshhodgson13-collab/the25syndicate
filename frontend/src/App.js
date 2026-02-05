@@ -230,17 +230,6 @@ const BottomNav = () => {
   );
 };
 
-// Stake Indicator Component
-const StakeIndicator = ({ stake }) => {
-  return (
-    <div className="stake-bar">
-      {[...Array(10)].map((_, i) => (
-        <div key={i} className={`stake-dot ${i < stake ? "filled" : ""}`} />
-      ))}
-    </div>
-  );
-};
-
 // Bet Card Component
 const BetCard = ({ bet, showResult = false }) => {
   const kickOffTime = new Date(bet.kick_off).toLocaleTimeString('en-GB', { 
