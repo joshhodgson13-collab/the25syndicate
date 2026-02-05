@@ -1072,12 +1072,6 @@ const AboutPage = () => {
     </div>
   );
 };
-          © 2024 The 2.5 Syndicate. All rights reserved.
-        </p>
-      </div>
-    </div>
-  );
-};
 
 // Account Page
 const AccountPage = () => {
