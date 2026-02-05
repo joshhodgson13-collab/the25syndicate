@@ -1004,7 +1004,7 @@ const AboutPage = () => {
                   </li>
                   <li className="flex items-start gap-3">
                     <Check className="w-5 h-5 text-[var(--success)] flex-shrink-0 mt-0.5" />
-                    <span>Take regular breaks and don't gamble when upset or stressed</span>
+                    <span>Take regular breaks and do not gamble when upset or stressed</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <Check className="w-5 h-5 text-[var(--success)] flex-shrink-0 mt-0.5" />
