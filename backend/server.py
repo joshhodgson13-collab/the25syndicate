@@ -560,6 +560,241 @@ async def get_subscriber_count(user: dict = Depends(get_admin_user)):
     count = await db.notification_subscriptions.count_documents({})
     return {"subscriber_count": count}
 
+# ============ TELEGRAM IMPORT ROUTES ============
+
+TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
+
+def parse_telegram_message(text: str) -> Optional[dict]:
+    """Parse a Telegram message into bet data"""
+    try:
+        lines = text.strip().split('\n')
+        
+        # Initialize variables
+        home_team = ""
+        away_team = ""
+        bet_type = ""
+        stake = 5
+        odds = 1.80
+        is_won = False
+        home_score = None
+        away_score = None
+        
+        for line in lines:
+            line = line.strip()
+            
+            # Match line (e.g., "Marseille v Rennes" or "Liverpool vs Man Utd")
+            if ' v ' in line and not line.startswith('⚽') and not line.startswith('📈') and not line.startswith('📦') and not line.startswith('⏰') and not line.startswith('✅') and not line.startswith('❌'):
+                teams = line.split(' v ')
+                if len(teams) == 2:
+                    home_team = teams[0].strip()
+                    away_team = teams[1].strip()
+            elif ' vs ' in line.lower() and not line.startswith('⚽'):
+                teams = re.split(r' vs ', line, flags=re.IGNORECASE)
+                if len(teams) == 2:
+                    home_team = teams[0].strip()
+                    away_team = teams[1].strip()
+            
+            # Bet type (e.g., "⚽ Over 2.5 Goals ✅✅✅")
+            if '⚽' in line or 'Over' in line or 'Under' in line or 'BTTS' in line:
+                if 'Over 2.5' in line:
+                    bet_type = "Over 2.5"
+                elif 'Under 2.5' in line:
+                    bet_type = "Under 2.5"
+                elif 'Over 1.5' in line:
+                    bet_type = "Over 1.5"
+                elif 'Under 1.5' in line:
+                    bet_type = "Under 1.5"
+                elif 'Over 3.5' in line:
+                    bet_type = "Over 3.5"
+                elif 'BTTS' in line.upper():
+                    bet_type = "BTTS Yes" if 'Yes' in line else "BTTS No"
+                
+                # Check for win indicators
+                if '✅' in line:
+                    is_won = True
+            
+            # Points/Stake (e.g., "📈 Points - 5")
+            if 'Points' in line or '📈' in line:
+                match = re.search(r'(\d+)', line)
+                if match:
+                    stake = int(match.group(1))
+                    if stake > 10:
+                        stake = 10
+            
+            # Odds (e.g., "📦 Odds - 1.37")
+            if 'Odds' in line or '📦' in line:
+                match = re.search(r'(\d+\.?\d*)', line)
+                if match:
+                    odds = float(match.group(1))
+            
+            # Result line (e.g., "✅ Result - Full House" or "❌ Result - Lost")
+            if 'Result' in line:
+                if '✅' in line or 'Full House' in line or 'Won' in line or 'Win' in line:
+                    is_won = True
+                elif '❌' in line or 'Lost' in line or 'Loss' in line:
+                    is_won = False
+            
+            # Score (e.g., "Score: 3-1" or "FT: 2-0")
+            score_match = re.search(r'(\d+)\s*[-:]\s*(\d+)', line)
+            if score_match and ('Score' in line or 'FT' in line or 'Result' in line):
+                home_score = int(score_match.group(1))
+                away_score = int(score_match.group(2))
+        
+        # Only return if we have required fields
+        if home_team and away_team and bet_type:
+            return {
+                "home_team": home_team,
+                "away_team": away_team,
+                "bet_type": bet_type,
+                "stake": stake,
+                "odds": odds,
+                "is_won": is_won,
+                "home_score": home_score,
+                "away_score": away_score
+            }
+        
+        return None
+    except Exception as e:
+        logger.error(f"Error parsing telegram message: {e}")
+        return None
+
+@api_router.get("/admin/telegram/updates")
+async def get_telegram_updates(user: dict = Depends(get_admin_user)):
+    """Fetch recent messages from Telegram channel"""
+    if not TELEGRAM_BOT_TOKEN:
+        raise HTTPException(status_code=500, detail="Telegram bot not configured")
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            # Get updates from the bot
+            response = await client.get(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates",
+                params={"limit": 100, "allowed_updates": ["channel_post"]}
+            )
+            data = response.json()
+            
+            if not data.get("ok"):
+                raise HTTPException(status_code=500, detail=f"Telegram API error: {data.get('description')}")
+            
+            messages = []
+            for update in data.get("result", []):
+                # Handle channel posts
+                post = update.get("channel_post") or update.get("message")
+                if post and post.get("text"):
+                    parsed = parse_telegram_message(post["text"])
+                    if parsed:
+                        messages.append({
+                            "message_id": post["message_id"],
+                            "date": datetime.fromtimestamp(post["date"], tz=timezone.utc).isoformat(),
+                            "text": post["text"][:200],
+                            "parsed": parsed
+                        })
+            
+            return {"messages": messages, "count": len(messages)}
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to connect to Telegram: {str(e)}")
+
+@api_router.post("/admin/telegram/import")
+async def import_from_telegram(user: dict = Depends(get_admin_user)):
+    """Import results from Telegram channel"""
+    if not TELEGRAM_BOT_TOKEN:
+        raise HTTPException(status_code=500, detail="Telegram bot not configured")
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates",
+                params={"limit": 100, "allowed_updates": ["channel_post"]}
+            )
+            data = response.json()
+            
+            if not data.get("ok"):
+                raise HTTPException(status_code=500, detail=f"Telegram API error: {data.get('description')}")
+            
+            imported_count = 0
+            skipped_count = 0
+            
+            for update in data.get("result", []):
+                post = update.get("channel_post") or update.get("message")
+                if post and post.get("text"):
+                    parsed = parse_telegram_message(post["text"])
+                    if parsed:
+                        # Check if already imported (by message_id)
+                        existing = await db.bets.find_one({"telegram_message_id": post["message_id"]})
+                        if existing:
+                            skipped_count += 1
+                            continue
+                        
+                        bet_id = str(uuid.uuid4())
+                        post_date = datetime.fromtimestamp(post["date"], tz=timezone.utc)
+                        
+                        bet_doc = {
+                            "id": bet_id,
+                            "home_team": parsed["home_team"],
+                            "away_team": parsed["away_team"],
+                            "league": "Imported",
+                            "bet_type": parsed["bet_type"],
+                            "odds": parsed["odds"],
+                            "stake": parsed["stake"],
+                            "kick_off": post_date.isoformat(),
+                            "is_vip": False,
+                            "status": "won" if parsed["is_won"] else "lost",
+                            "home_score": parsed["home_score"],
+                            "away_score": parsed["away_score"],
+                            "created_at": datetime.now(timezone.utc).isoformat(),
+                            "date": post_date.strftime("%Y-%m-%d"),
+                            "telegram_message_id": post["message_id"]
+                        }
+                        
+                        await db.bets.insert_one(bet_doc)
+                        imported_count += 1
+            
+            return {
+                "success": True,
+                "imported": imported_count,
+                "skipped": skipped_count,
+                "message": f"Imported {imported_count} results, skipped {skipped_count} duplicates"
+            }
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to connect to Telegram: {str(e)}")
+
+@api_router.post("/admin/telegram/import-manual")
+async def import_manual_telegram(text: str = "", user: dict = Depends(get_admin_user)):
+    """Manually import a pasted Telegram message"""
+    if not text:
+        raise HTTPException(status_code=400, detail="No text provided")
+    
+    parsed = parse_telegram_message(text)
+    if not parsed:
+        raise HTTPException(status_code=400, detail="Could not parse the message. Check the format.")
+    
+    bet_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    
+    bet_doc = {
+        "id": bet_id,
+        "home_team": parsed["home_team"],
+        "away_team": parsed["away_team"],
+        "league": "Imported",
+        "bet_type": parsed["bet_type"],
+        "odds": parsed["odds"],
+        "stake": parsed["stake"],
+        "kick_off": now.isoformat(),
+        "is_vip": False,
+        "status": "won" if parsed["is_won"] else "lost",
+        "home_score": parsed["home_score"],
+        "away_score": parsed["away_score"],
+        "created_at": now.isoformat(),
+        "date": now.strftime("%Y-%m-%d")
+    }
+    
+    await db.bets.insert_one(bet_doc)
+    
+    return {
+        "success": True,
+        "bet": {k: v for k, v in bet_doc.items() if k != '_id'}
+    }
+
 # ============ BASIC ROUTES ============
 
 @api_router.get("/")
