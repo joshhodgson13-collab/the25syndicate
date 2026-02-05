@@ -766,58 +766,312 @@ const VIPPage = () => {
 
 // About Page
 const AboutPage = () => {
+  const [activeSection, setActiveSection] = useState("about");
+  
   return (
     <div className="pb-24 px-4" data-testid="about-page">
       <div className="my-4">
-        <h2 className="font-display text-2xl text-[var(--gold)] text-center mb-6">ABOUT US</h2>
+        <h2 className="font-display text-2xl text-[var(--gold)] text-center mb-6">ABOUT</h2>
+        
+        {/* Section Tabs */}
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+          {[
+            { id: "about", label: "About" },
+            { id: "disclaimer", label: "Disclaimer" },
+            { id: "terms", label: "Terms" },
+            { id: "privacy", label: "Privacy" },
+            { id: "responsible", label: "Responsible Gambling" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSection(tab.id)}
+              className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-all ${
+                activeSection === tab.id
+                  ? "bg-[var(--gold)] text-black font-semibold"
+                  : "bg-[var(--charcoal-lighter)] text-[var(--text-secondary)]"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
         
         <div className="space-y-4">
-          <div className="bet-card p-6">
-            <h3 className="font-display text-lg text-[var(--gold)] mb-3">What is The 2.5 Syndicate?</h3>
-            <p className="text-[var(--text-secondary)] leading-relaxed">
-              We are a team of experienced football analysts providing daily betting tips focused on the Over/Under 2.5 goals market. Our selections are based on extensive research, statistical analysis, and years of experience in football betting.
-            </p>
-          </div>
+          {/* About Section */}
+          {activeSection === "about" && (
+            <>
+              <div className="bet-card p-6">
+                <h3 className="font-display text-lg text-[var(--gold)] mb-3">What is The 2.5 Syndicate?</h3>
+                <p className="text-[var(--text-secondary)] leading-relaxed">
+                  The 2.5 Syndicate is a football analysis and tips service. We provide educational content and statistical analysis for football matches, focusing primarily on the Over/Under goals markets. Our team of experienced analysts research matches daily to provide informed predictions.
+                </p>
+                <p className="text-[var(--text-secondary)] leading-relaxed mt-3">
+                  <strong className="text-white">Important:</strong> We are NOT a gambling or betting platform. We do not accept bets, process payments for gambling, or facilitate any form of wagering. We provide information and entertainment content only.
+                </p>
+              </div>
+              
+              <div className="bet-card p-6">
+                <h3 className="font-display text-lg text-[var(--gold)] mb-3">How It Works</h3>
+                <ul className="text-[var(--text-secondary)] space-y-3">
+                  <li className="flex items-start gap-3">
+                    <span className="text-[var(--gold)] font-bold">1.</span>
+                    <span>Our analysts research upcoming football matches daily</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-[var(--gold)] font-bold">2.</span>
+                    <span>We publish free analysis and predictions for selected matches</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-[var(--gold)] font-bold">3.</span>
+                    <span>VIP subscribers receive additional premium analysis</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-[var(--gold)] font-bold">4.</span>
+                    <span>We track and publish our prediction accuracy transparently</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <div className="bet-card p-6">
+                <h3 className="font-display text-lg text-[var(--gold)] mb-3">Age Restriction</h3>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 rounded-full bg-[var(--error)] flex items-center justify-center font-bold text-white text-lg">
+                    18+
+                  </div>
+                  <p className="text-white font-semibold">This app is for users aged 18 and over only</p>
+                </div>
+                <p className="text-[var(--text-secondary)] text-sm">
+                  By using this application, you confirm that you are at least 18 years of age (or the legal age in your jurisdiction). We do not knowingly provide services to minors.
+                </p>
+              </div>
+              
+              <div className="bet-card p-6">
+                <h3 className="font-display text-lg text-[var(--gold)] mb-3">Contact Us</h3>
+                <p className="text-[var(--text-secondary)] mb-3">
+                  For support, inquiries, or concerns:
+                </p>
+                <p className="text-[var(--gold)]">support@the25syndicate.com</p>
+                <p className="text-[var(--text-muted)] text-sm mt-3">
+                  We aim to respond to all inquiries within 48 hours.
+                </p>
+              </div>
+            </>
+          )}
           
-          <div className="bet-card p-6">
-            <h3 className="font-display text-lg text-[var(--gold)] mb-3">How It Works</h3>
-            <ul className="text-[var(--text-secondary)] space-y-3">
-              <li className="flex items-start gap-3">
-                <span className="text-[var(--gold)] font-bold">1.</span>
-                <span>We publish daily free tips available to all members</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-[var(--gold)] font-bold">2.</span>
-                <span>VIP members get access to our premium high-confidence selections</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-[var(--gold)] font-bold">3.</span>
-                <span>Each tip includes recommended stake level (1-10) and odds</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="text-[var(--gold)] font-bold">4.</span>
-                <span>Results are updated daily so you can track our performance</span>
-              </li>
-            </ul>
-          </div>
+          {/* Disclaimer Section */}
+          {activeSection === "disclaimer" && (
+            <>
+              <div className="bet-card p-6 border-[var(--error)]/50 border">
+                <h3 className="font-display text-lg text-[var(--error)] mb-3">Important Disclaimer</h3>
+                <div className="text-[var(--text-secondary)] space-y-4 text-sm leading-relaxed">
+                  <p>
+                    <strong className="text-white">NO GAMBLING SERVICES:</strong> The 2.5 Syndicate does NOT provide gambling services. We do not accept bets, hold funds, process gambling transactions, or operate as a bookmaker in any capacity.
+                  </p>
+                  <p>
+                    <strong className="text-white">INFORMATION ONLY:</strong> All content provided through this application is for informational and entertainment purposes only. Our predictions and analysis are opinions based on statistical research and should not be considered as financial or gambling advice.
+                  </p>
+                  <p>
+                    <strong className="text-white">NO GUARANTEES:</strong> Past performance does not guarantee future results. We make no warranties or guarantees regarding the accuracy of our predictions. Sports events are inherently unpredictable.
+                  </p>
+                  <p>
+                    <strong className="text-white">USER RESPONSIBILITY:</strong> Any decision to place bets with third-party bookmakers is entirely your own responsibility. We are not liable for any losses incurred from decisions made based on our content.
+                  </p>
+                  <p>
+                    <strong className="text-white">LEGAL COMPLIANCE:</strong> Users are responsible for ensuring that accessing betting-related content and any subsequent gambling activities comply with the laws of their jurisdiction.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="bet-card p-6">
+                <h3 className="font-display text-lg text-[var(--gold)] mb-3">Financial Risk Warning</h3>
+                <p className="text-[var(--text-secondary)] text-sm leading-relaxed">
+                  Gambling involves significant financial risk. Never bet more than you can afford to lose. If you choose to gamble with third-party services, please set strict limits and stick to them. The 2.5 Syndicate is not responsible for any financial decisions you make.
+                </p>
+              </div>
+            </>
+          )}
           
-          <div className="bet-card p-6">
-            <h3 className="font-display text-lg text-[var(--gold)] mb-3">Disclaimer</h3>
-            <p className="text-[var(--text-secondary)] leading-relaxed text-sm">
-              The 2.5 Syndicate is not a gambling platform. We provide information, tips, and entertainment purposes only. Please gamble responsibly. Only bet what you can afford to lose. If you or someone you know has a gambling problem, please seek help.
-            </p>
-          </div>
+          {/* Terms Section */}
+          {activeSection === "terms" && (
+            <>
+              <div className="bet-card p-6">
+                <h3 className="font-display text-lg text-[var(--gold)] mb-3">Terms of Service</h3>
+                <p className="text-[var(--text-muted)] text-xs mb-4">Last updated: February 2025</p>
+                <div className="text-[var(--text-secondary)] space-y-4 text-sm leading-relaxed">
+                  <div>
+                    <h4 className="text-white font-semibold mb-2">1. Acceptance of Terms</h4>
+                    <p>By accessing or using The 2.5 Syndicate application, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our service.</p>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-2">2. Service Description</h4>
+                    <p>We provide football match analysis, predictions, and educational content. We are an information service, not a gambling operator. We do not accept bets or facilitate gambling.</p>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-2">3. Eligibility</h4>
+                    <p>You must be at least 18 years old (or the legal age in your jurisdiction) to use this service. By using our service, you represent and warrant that you meet this requirement.</p>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-2">4. User Accounts</h4>
+                    <p>You are responsible for maintaining the confidentiality of your account credentials. You agree to notify us immediately of any unauthorized access to your account.</p>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-2">5. Subscription & Payments</h4>
+                    <p>VIP subscriptions are billed monthly. You may cancel at any time. Refunds are provided in accordance with applicable consumer protection laws.</p>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-2">6. Intellectual Property</h4>
+                    <p>All content, analysis, and predictions are our intellectual property. You may not reproduce, distribute, or commercially exploit our content without permission.</p>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-2">7. Limitation of Liability</h4>
+                    <p>We are not liable for any losses, damages, or expenses arising from your use of our service or any gambling activities you undertake with third parties.</p>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-2">8. Modifications</h4>
+                    <p>We reserve the right to modify these terms at any time. Continued use of the service constitutes acceptance of modified terms.</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
           
-          <div className="bet-card p-6">
-            <h3 className="font-display text-lg text-[var(--gold)] mb-3">Contact</h3>
-            <p className="text-[var(--text-secondary)]">
-              For support or inquiries, contact us at:
-            </p>
-            <p className="text-[var(--gold)] mt-2">support@the25syndicate.com</p>
-          </div>
+          {/* Privacy Section */}
+          {activeSection === "privacy" && (
+            <>
+              <div className="bet-card p-6">
+                <h3 className="font-display text-lg text-[var(--gold)] mb-3">Privacy Policy</h3>
+                <p className="text-[var(--text-muted)] text-xs mb-4">Last updated: February 2025</p>
+                <div className="text-[var(--text-secondary)] space-y-4 text-sm leading-relaxed">
+                  <div>
+                    <h4 className="text-white font-semibold mb-2">Information We Collect</h4>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>Email address and name (for account creation)</li>
+                      <li>Payment information (processed securely by Stripe)</li>
+                      <li>Usage data and analytics</li>
+                      <li>Device information for app functionality</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-2">How We Use Your Information</h4>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>To provide and maintain our service</li>
+                      <li>To process subscriptions and payments</li>
+                      <li>To send service-related notifications</li>
+                      <li>To improve our service and user experience</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-2">Data Security</h4>
+                    <p>We implement industry-standard security measures to protect your personal information. Payment data is handled by Stripe and never stored on our servers.</p>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-2">Third-Party Services</h4>
+                    <p>We use third-party services including Stripe (payments) and Google AdSense (advertising). These services have their own privacy policies.</p>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-2">Your Rights</h4>
+                    <p>You have the right to access, correct, or delete your personal data. Contact us at support@the25syndicate.com to exercise these rights.</p>
+                  </div>
+                  <div>
+                    <h4 className="text-white font-semibold mb-2">Cookies</h4>
+                    <p>We use cookies and similar technologies to improve user experience and for analytics. You can control cookie settings in your browser.</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+          
+          {/* Responsible Gambling Section */}
+          {activeSection === "responsible" && (
+            <>
+              <div className="bet-card p-6 border-[var(--gold)]/50 border">
+                <h3 className="font-display text-lg text-[var(--gold)] mb-3">Responsible Gambling</h3>
+                <p className="text-[var(--text-secondary)] leading-relaxed mb-4">
+                  While The 2.5 Syndicate does not provide gambling services, we recognize that some users may use our analysis when making betting decisions with third-party bookmakers. We are committed to promoting responsible gambling.
+                </p>
+              </div>
+              
+              <div className="bet-card p-6">
+                <h3 className="font-display text-lg text-white mb-3">Guidelines for Responsible Gambling</h3>
+                <ul className="text-[var(--text-secondary)] space-y-3 text-sm">
+                  <li className="flex items-start gap-3">
+                    <Check className="w-5 h-5 text-[var(--success)] flex-shrink-0 mt-0.5" />
+                    <span>Only gamble with money you can afford to lose</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="w-5 h-5 text-[var(--success)] flex-shrink-0 mt-0.5" />
+                    <span>Set a budget and stick to it - never chase losses</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="w-5 h-5 text-[var(--success)] flex-shrink-0 mt-0.5" />
+                    <span>Take regular breaks and don't gamble when upset or stressed</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="w-5 h-5 text-[var(--success)] flex-shrink-0 mt-0.5" />
+                    <span>Balance gambling with other activities</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="w-5 h-5 text-[var(--success)] flex-shrink-0 mt-0.5" />
+                    <span>Never borrow money to gamble</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="w-5 h-5 text-[var(--success)] flex-shrink-0 mt-0.5" />
+                    <span>Be aware of how much time and money you spend</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <div className="bet-card p-6">
+                <h3 className="font-display text-lg text-white mb-3">Warning Signs of Problem Gambling</h3>
+                <ul className="text-[var(--text-secondary)] space-y-2 text-sm">
+                  <li>• Spending more money or time gambling than intended</li>
+                  <li>• Difficulty controlling or stopping gambling</li>
+                  <li>• Feeling restless or irritable when trying to stop</li>
+                  <li>• Gambling to escape problems or relieve negative feelings</li>
+                  <li>• Chasing losses with more gambling</li>
+                  <li>• Lying to family members about gambling</li>
+                  <li>• Jeopardizing relationships, job, or education due to gambling</li>
+                </ul>
+              </div>
+              
+              <div className="bet-card p-6 bg-gradient-to-br from-[var(--charcoal-light)] to-[var(--charcoal)]">
+                <h3 className="font-display text-lg text-white mb-3">Get Help</h3>
+                <p className="text-[var(--text-secondary)] text-sm mb-4">
+                  If you or someone you know has a gambling problem, please reach out to these organizations:
+                </p>
+                <div className="space-y-3">
+                  <div className="bg-[var(--charcoal-lighter)] p-3 rounded">
+                    <p className="text-white font-semibold">GamCare (UK)</p>
+                    <p className="text-[var(--gold)]">www.gamcare.org.uk</p>
+                    <p className="text-[var(--text-muted)] text-sm">Helpline: 0808 8020 133</p>
+                  </div>
+                  <div className="bg-[var(--charcoal-lighter)] p-3 rounded">
+                    <p className="text-white font-semibold">Gamblers Anonymous</p>
+                    <p className="text-[var(--gold)]">www.gamblersanonymous.org</p>
+                  </div>
+                  <div className="bg-[var(--charcoal-lighter)] p-3 rounded">
+                    <p className="text-white font-semibold">BeGambleAware</p>
+                    <p className="text-[var(--gold)]">www.begambleaware.org</p>
+                    <p className="text-[var(--text-muted)] text-sm">Helpline: 0808 8020 133</p>
+                  </div>
+                  <div className="bg-[var(--charcoal-lighter)] p-3 rounded">
+                    <p className="text-white font-semibold">National Council on Problem Gambling (US)</p>
+                    <p className="text-[var(--gold)]">www.ncpgambling.org</p>
+                    <p className="text-[var(--text-muted)] text-sm">Helpline: 1-800-522-4700</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
         
         <p className="text-[var(--text-muted)] text-center text-sm mt-8">
+          © 2025 The 2.5 Syndicate. All rights reserved.
+        </p>
+      </div>
+    </div>
+  );
+};
           © 2024 The 2.5 Syndicate. All rights reserved.
         </p>
       </div>
