@@ -815,6 +815,9 @@ const AdminPanel = ({ onClose }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [adminVerified, setAdminVerified] = useState(user?.is_admin || false);
   const [adminCode, setAdminCode] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [telegramMessages, setTelegramMessages] = useState([]);
+  const [showTelegramPreview, setShowTelegramPreview] = useState(false);
   
   // New bet form
   const [newBet, setNewBet] = useState({
@@ -861,6 +864,44 @@ const AdminPanel = ({ onClose }) => {
       toast.success("Admin access granted");
     } catch (e) {
       toast.error("Invalid admin code");
+    }
+  };
+
+  const fetchTelegramUpdates = async () => {
+    setImporting(true);
+    try {
+      const response = await axios.get(`${API}/admin/telegram/updates`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTelegramMessages(response.data.messages);
+      setShowTelegramPreview(true);
+      if (response.data.count === 0) {
+        toast.info("No new messages found in Telegram channel");
+      } else {
+        toast.success(`Found ${response.data.count} messages to import`);
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Failed to fetch Telegram updates");
+      console.error(e);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const importFromTelegram = async () => {
+    setImporting(true);
+    try {
+      const response = await axios.post(`${API}/admin/telegram/import`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(response.data.message);
+      setShowTelegramPreview(false);
+      fetchBets();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Failed to import from Telegram");
+      console.error(e);
+    } finally {
+      setImporting(false);
     }
   };
 
