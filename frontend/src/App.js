@@ -1551,10 +1551,21 @@ const AdminPanel = ({ onClose }) => {
                     <div>
                       <Label className="text-[var(--text-secondary)] text-xs">Odds</Label>
                       <Input
-                        type="number"
-                        step="0.01"
+                        type="text"
                         value={quickResult.odds}
-                        onChange={(e) => setQuickResult({...quickResult, odds: parseFloat(e.target.value) || 1.80})}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          // Allow empty, numbers, and decimal point
+                          if (val === '' || /^[0-9]*\.?[0-9]*$/.test(val)) {
+                            setQuickResult({...quickResult, odds: val});
+                          }
+                        }}
+                        onBlur={(e) => {
+                          // Convert to number on blur, default to 1.80 if invalid
+                          const num = parseFloat(e.target.value);
+                          setQuickResult({...quickResult, odds: isNaN(num) ? 1.80 : num});
+                        }}
+                        placeholder="2.34"
                         className="text-sm"
                         data-testid="quick-odds"
                       />
