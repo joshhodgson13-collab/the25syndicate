@@ -1015,6 +1015,52 @@ const AdminPanel = ({ onClose }) => {
         
         <ScrollArea className="max-h-[70vh] pr-4">
           <div className="space-y-4">
+            {/* Telegram Import Section */}
+            <div className="vip-card p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Download className="w-5 h-5 text-[var(--gold)]" />
+                  <span className="text-white font-medium">Import from Telegram</span>
+                </div>
+                <Button
+                  onClick={fetchTelegramUpdates}
+                  disabled={importing}
+                  size="sm"
+                  className="btn-gold"
+                  data-testid="fetch-telegram-btn"
+                >
+                  {importing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  <span className="ml-2">{importing ? "Loading..." : "Fetch"}</span>
+                </Button>
+              </div>
+              
+              {showTelegramPreview && telegramMessages.length > 0 && (
+                <div className="space-y-2 mt-3">
+                  <p className="text-[var(--text-secondary)] text-sm">Found {telegramMessages.length} results:</p>
+                  <div className="max-h-40 overflow-y-auto space-y-2">
+                    {telegramMessages.map((msg, i) => (
+                      <div key={i} className="bg-[var(--charcoal-lighter)] p-2 rounded text-sm">
+                        <span className="text-white">{msg.parsed.home_team} vs {msg.parsed.away_team}</span>
+                        <span className="text-[var(--gold)] ml-2">{msg.parsed.bet_type}</span>
+                        <span className={`ml-2 ${msg.parsed.is_won ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
+                          {msg.parsed.is_won ? '✅' : '❌'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    onClick={importFromTelegram}
+                    disabled={importing}
+                    className="btn-gold w-full mt-2"
+                    data-testid="import-telegram-btn"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Import All Results
+                  </Button>
+                </div>
+              )}
+            </div>
+
             <Button 
               onClick={() => setShowAddForm(!showAddForm)} 
               className="btn-gold w-full"
