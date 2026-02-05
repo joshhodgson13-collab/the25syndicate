@@ -2569,7 +2569,7 @@ const AgeVerificationGate = ({ children }) => {
           
           <div className="bg-[var(--charcoal-lighter)] rounded-lg p-4 mb-6">
             <p className="text-[var(--text-muted)] text-xs leading-relaxed">
-              By clicking "I am 18 or older", you confirm that:
+              By clicking the button below, you confirm that:
             </p>
             <ul className="text-[var(--text-muted)] text-xs mt-2 space-y-1">
               <li>• You are at least 18 years of age</li>
