@@ -518,11 +518,19 @@ const HomePage = () => {
           <div className="text-center py-8 text-[var(--text-secondary)]">Loading...</div>
         ) : bets.length > 0 ? (
           <div className="space-y-3">
-            {bets.map((bet, index) => (
-              <div key={bet.id} style={{ animationDelay: `${index * 0.1}s` }}>
-                <BetCard bet={bet} />
-              </div>
-            ))}
+            {bets.map((bet, index) => {
+              // Every 3rd bet (3, 6, 9, 12...) is ad-locked (index 2, 5, 8, 11...)
+              const isAdLocked = (index + 1) % 3 === 0;
+              return (
+                <div key={bet.id} style={{ animationDelay: `${index * 0.1}s` }}>
+                  {isAdLocked ? (
+                    <AdLockedBet bet={bet} index={index} />
+                  ) : (
+                    <BetCard bet={bet} />
+                  )}
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="bet-card p-8 text-center">
