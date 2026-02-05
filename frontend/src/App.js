@@ -1482,13 +1482,123 @@ const AdminPanel = ({ onClose }) => {
               )}
             </div>
 
+            {/* Quick Manual Add Result */}
+            <div className="vip-card p-4">
+              <button
+                onClick={() => setShowQuickAdd(!showQuickAdd)}
+                className="flex items-center justify-between w-full"
+              >
+                <div className="flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-[var(--gold)]" />
+                  <span className="text-white font-medium">Quick Add Result (Manual)</span>
+                </div>
+                <span className="text-[var(--gold)]">{showQuickAdd ? '▼' : '▶'}</span>
+              </button>
+              
+              {showQuickAdd && (
+                <div className="mt-4 space-y-3">
+                  <p className="text-[var(--text-secondary)] text-sm">
+                    Manually add any result - accumulators, HT/FT, custom bets
+                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-[var(--text-secondary)] text-xs">Home Team</Label>
+                      <Input
+                        value={quickResult.home_team}
+                        onChange={(e) => setQuickResult({...quickResult, home_team: e.target.value})}
+                        placeholder="e.g., Arsenal"
+                        className="text-sm"
+                        data-testid="quick-home-team"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[var(--text-secondary)] text-xs">Away Team</Label>
+                      <Input
+                        value={quickResult.away_team}
+                        onChange={(e) => setQuickResult({...quickResult, away_team: e.target.value})}
+                        placeholder="e.g., Chelsea"
+                        className="text-sm"
+                        data-testid="quick-away-team"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-[var(--text-secondary)] text-xs">Bet Type (type anything)</Label>
+                    <Input
+                      value={quickResult.bet_type}
+                      onChange={(e) => setQuickResult({...quickResult, bet_type: e.target.value})}
+                      placeholder="e.g., Accumulator, HT Result, Arsenal to Win"
+                      className="text-sm"
+                      data-testid="quick-bet-type"
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <Label className="text-[var(--text-secondary)] text-xs">Points</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={quickResult.stake}
+                        onChange={(e) => setQuickResult({...quickResult, stake: parseInt(e.target.value) || 5})}
+                        className="text-sm"
+                        data-testid="quick-stake"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[var(--text-secondary)] text-xs">Odds</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={quickResult.odds}
+                        onChange={(e) => setQuickResult({...quickResult, odds: parseFloat(e.target.value) || 1.80})}
+                        className="text-sm"
+                        data-testid="quick-odds"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-[var(--text-secondary)] text-xs">Result</Label>
+                      <Select
+                        value={quickResult.status}
+                        onValueChange={(value) => setQuickResult({...quickResult, status: value})}
+                      >
+                        <SelectTrigger className="text-sm" data-testid="quick-status">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="won">✅ Won</SelectItem>
+                          <SelectItem value="lost">❌ Lost</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <Button
+                    onClick={addQuickResult}
+                    disabled={importing || !quickResult.home_team || !quickResult.away_team || !quickResult.bet_type}
+                    className="btn-gold w-full"
+                    data-testid="quick-add-btn"
+                  >
+                    {importing ? (
+                      <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Adding...</>
+                    ) : (
+                      <><Plus className="w-4 h-4 mr-2" /> Add Result</>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+
             <Button 
               onClick={() => setShowAddForm(!showAddForm)} 
               className="btn-gold w-full"
               data-testid="add-bet-toggle"
             >
               <Plus className="w-4 h-4 mr-2" />
-              {showAddForm ? "Cancel" : "Add New Bet"}
+              {showAddForm ? "Cancel" : "Add New Bet (Future)"}
             </Button>
             
             {showAddForm && (
