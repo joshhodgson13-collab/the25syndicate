@@ -21,3 +21,16 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+#env files
+.env
+backend/.env
+frontend/.env
+.env.*
+
+node_modules
+build
+.env
+memory
+test reports
+__pycache__

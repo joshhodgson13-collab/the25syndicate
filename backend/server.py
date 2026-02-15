@@ -350,7 +350,7 @@ async def get_vip_results(user: dict = Depends(get_current_user)):
 
 @api_router.post("/checkout/create")
 async def create_checkout(request: Request, checkout_data: CheckoutRequest, user: dict = Depends(get_current_user)):
-    from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest
+    # from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest
     
     stripe_api_key = os.environ.get('STRIPE_API_KEY')
     if not stripe_api_key:
@@ -396,7 +396,7 @@ async def create_checkout(request: Request, checkout_data: CheckoutRequest, user
 
 @api_router.get("/checkout/status/{session_id}")
 async def get_checkout_status(session_id: str, request: Request, user: dict = Depends(get_current_user)):
-    from emergentintegrations.payments.stripe.checkout import StripeCheckout
+    # from emergentintegrations.payments.stripe.checkout import StripeCheckout
     
     stripe_api_key = os.environ.get('STRIPE_API_KEY')
     if not stripe_api_key:
@@ -433,7 +433,7 @@ async def get_checkout_status(session_id: str, request: Request, user: dict = De
 
 @api_router.post("/webhook/stripe")
 async def stripe_webhook(request: Request):
-    from emergentintegrations.payments.stripe.checkout import StripeCheckout
+    # from emergentintegrations.payments.stripe.checkout import StripeCheckout
     
     stripe_api_key = os.environ.get('STRIPE_API_KEY')
     if not stripe_api_key:

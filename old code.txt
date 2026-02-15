@@ -1,0 +1,657 @@
+// src/lib/firestore.ts
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
+} from "firebase/firestore";
+import { db } from "./firebase";
+
+export type PickStatus = "PENDING" | "WIN" | "LOSS" | "VOID";
+
+export type Pick = {
+  id: string;
+  fixture: string;
+  market: string;
+  odds: number;
+  points: number;
+  isVip: boolean;
+  day: string; // "YYYY-MM-DD"
+  status: PickStatus;
+  active: boolean; // show on homepage if true
+  profit?: number; // stored after result
+};
+
+export async function createPickBlank(opts: { isVip: boolean; day: string }) {
+  const ref = await addDoc(collection(db, "picks"), {
+    fixture: "",
+    market: "",
+    odds: 0,
+    points: 0,
+    isVip: opts.isVip,
+    day: opts.day,
+    status: "PENDING",
+    active: true,
+    profit: 0,
+  });
+  return ref.id;
+}
+
+export async function updatePick(pickId: string, data: Partial<Pick>) {
+  const ref = doc(db, "picks", pickId);
+  await updateDoc(ref, data as any);
+}
+
+export async function deletePick(pickId: string) {
+  const ref = doc(db, "picks", pickId);
+  await deleteDoc(ref);
+}
+
+/**
+ * Get all picks for a day (single where only = no composite index)
+ */
+export async function getPicksForDay(day: string): Promise<Pick[]> {
+  const q = query(collection(db, "picks"), where("day", "==", day));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+}
+
+/**
+ * Home page picks = day + active true
+ * We fetch day only, then filter locally to avoid composite indexes.
+ */
+export async function getActivePicksForDay(day: string): Promise<Pick[]> {
+  const all = await getPicksForDay(day);
+  return all.filter((p) => p.active === true && p.status === "PENDING");
+}
+
+/**
+ * Results page = day then filter locally
+ */
+export async function getResultsForDay(day: string): Promise<Pick[]> {
+  const all = await getPicksForDay(day);
+  return all.filter((p) => p.status !== "PENDING");
+}
+
+/**
+ * Set result: moves from home to results by setting active=false and status WIN/LOSS/VOID
+ * Also calculates profit.
+ */
+export async function setPickResult(pickId: string, status: PickStatus) {
+  const ref = doc(db, "picks", pickId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Pick not found");
+
+  const d: any = snap.data();
+  const odds = Number(d.odds || 0);
+  const points = Number(d.points || 0);
+
+  let profit = 0;
+  if (status === "WIN") profit = (odds - 1) * points;
+  if (status === "LOSS") profit = -points;
+  if (status === "VOID") profit = 0;
+
+  await updateDoc(ref, {
+    status,
+    active: false,
+    profit: Number.isFinite(profit) ? Number(profit.toFixed(2)) : 0,
+  });
+}
+
+/**
+ * Clone a pick into another day (tomorrow)
+ */
+export async function clonePick(pickId: string, newDay: string) {
+  const srcRef = doc(db, "picks", pickId);
+  const snap = await getDoc(srcRef);
+  if (!snap.exists()) throw new Error("Pick not found");
+
+  const d: any = snap.data();
+
+  const ref = await addDoc(collection(db, "picks"), {
+    fixture: d.fixture ?? "",
+    market: d.market ?? "",
+    odds: Number(d.odds ?? 0),
+    points: Number(d.points ?? 0),
+    isVip: !!d.isVip,
+    day: newDay,
+    status: "PENDING",
+    active: true,
+    profit: 0,
+  });
+
+  return ref.id;
+}
+
+
+
+
+
+
+
+
+
+// src/screens/AdminScreen.tsx
+import React, { useEffect, useMemo, useState } from "react";
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+
+import HeaderBar from "../components/HeaderBar";
+import ScreenShell from "../components/ScreenShell";
+import { COLORS } from "../theme/colors";
+
+import {
+  addPick,
+  listenPicksByDay,
+  Pick,
+  PickStatus,
+  setPickResult,
+  todayKey,
+  tomorrowKey,
+} from "../lib/picks";
+
+type Mode = "add" | "today" | "tomorrow";
+
+export default function AdminScreen() {
+  const [mode, setMode] = useState<Mode>("add");
+
+  const [today, setToday] = useState<Pick[]>([]);
+  const [tomorrow, setTomorrow] = useState<Pick[]>([]);
+
+  const todayDayKey = useMemo(() => todayKey(), []);
+  const tomorrowDayKey = useMemo(() => tomorrowKey(), []);
+
+  useEffect(() => {
+    const unsubToday = listenPicksByDay(todayDayKey, setToday);
+    const unsubTomorrow = listenPicksByDay(tomorrowDayKey, setTomorrow);
+    return () => {
+      unsubToday && unsubToday();
+      unsubTomorrow && unsubTomorrow();
+    };
+  }, [todayDayKey, tomorrowDayKey]);
+
+  return (
+    <ScreenShell>
+      <HeaderBar title="Admin" />
+
+      <View style={styles.tabs}>
+        <Tab label="Add Bet" active={mode === "add"} onPress={() => setMode("add")} />
+        <Tab label="Today’s Bets" active={mode === "today"} onPress={() => setMode("today")} />
+        <Tab label="Tomorrow’s Bets" active={mode === "tomorrow"} onPress={() => setMode("tomorrow")} />
+      </View>
+
+      {mode === "add" && <AddBetPanel todayDayKey={todayDayKey} tomorrowDayKey={tomorrowDayKey} />}
+
+      {mode === "today" && (
+        <BetsList
+          title="Today’s Bets"
+          subtitle={`Day key: ${todayDayKey}`}
+          items={today}
+          showResultButtons
+        />
+      )}
+
+      {mode === "tomorrow" && (
+        <BetsList
+          title="Tomorrow’s Bets"
+          subtitle={`Day key: ${tomorrowDayKey}`}
+          items={tomorrow}
+          showResultButtons={false}
+        />
+      )}
+    </ScreenShell>
+  );
+}
+
+function Tab({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity onPress={onPress} style={[styles.tab, active && styles.tabActive]}>
+      <Text style={[styles.tabText, active && styles.tabTextActive]}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function AddBetPanel({
+  todayDayKey,
+  tomorrowDayKey,
+}: {
+  todayDayKey: string;
+  tomorrowDayKey: string;
+}) {
+  const [target, setTarget] = useState<"today" | "tomorrow">("today");
+
+  const [league, setLeague] = useState("");
+  const [fixture, setFixture] = useState("");
+  const [market, setMarket] = useState("");
+
+  const [odds, setOdds] = useState("1.80");
+  const [points, setPoints] = useState("1");
+  const [kickoffTime, setKickoffTime] = useState("15:00");
+
+  const [saving, setSaving] = useState(false);
+
+  const dayKey = target === "today" ? todayDayKey : tomorrowDayKey;
+
+  const validate = () => {
+    if (!fixture.trim()) return "Fixture is required";
+    if (!market.trim()) return "Market is required";
+
+    const o = Number(odds);
+    const p = Number(points);
+
+    if (!Number.isFinite(o) || o <= 1) return "Odds must be a number > 1";
+    if (!Number.isFinite(p) || p <= 0) return "Points must be a number > 0";
+
+    // simple HH:MM validation
+    if (!/^\d{2}:\d{2}$/.test(kickoffTime)) return "Kickoff must be HH:MM";
+    const [hh, mm] = kickoffTime.split(":").map((x) => Number(x));
+    if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return "Kickoff time invalid";
+
+    return null;
+  };
+
+  const onAdd = async () => {
+    const err = validate();
+    if (err) return Alert.alert("Fix this", err);
+
+    try {
+      setSaving(true);
+      await addPick({
+        dayKey,
+        kickoffTime,
+        league: league.trim(),
+        fixture: fixture.trim(),
+        market: market.trim(),
+        odds: Number(odds),
+        points: Number(points),
+      });
+
+      setLeague("");
+      setFixture("");
+      setMarket("");
+      setOdds("1.80");
+      setPoints("1");
+      setKickoffTime("15:00");
+
+      Alert.alert("Added ✅", `Bet added to ${target} (${dayKey})`);
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Could not add bet");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <View style={styles.panel}>
+      <Text style={styles.h1}>Add a bet</Text>
+      <Text style={styles.sub}>Creates a pending bet. Today/Results pages will update automatically.</Text>
+
+      <View style={styles.row}>
+        <TouchableOpacity
+          onPress={() => setTarget("today")}
+          style={[styles.pill, target === "today" && styles.pillActive]}
+        >
+          <Text style={[styles.pillText, target === "today" && styles.pillTextActive]}>Today</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => setTarget("tomorrow")}
+          style={[styles.pill, target === "tomorrow" && styles.pillActive]}
+        >
+          <Text style={[styles.pillText, target === "tomorrow" && styles.pillTextActive]}>Tomorrow</Text>
+        </TouchableOpacity>
+
+        <View style={{ flex: 1 }} />
+        <Text style={styles.dayKey}>Day: {dayKey}</Text>
+      </View>
+
+      <Label label="Kickoff time (HH:MM)" />
+      <TextInput value={kickoffTime} onChangeText={setKickoffTime} style={styles.input} placeholder="15:00" />
+
+      <Label label="League (optional)" />
+      <TextInput value={league} onChangeText={setLeague} style={styles.input} placeholder="EPL" />
+
+      <Label label="Fixture" />
+      <TextInput value={fixture} onChangeText={setFixture} style={styles.input} placeholder="Arsenal vs Chelsea" />
+
+      <Label label="Market" />
+      <TextInput value={market} onChangeText={setMarket} style={styles.input} placeholder="Over 2.5 Goals" />
+
+      <View style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Label label="Odds" />
+          <TextInput
+            value={odds}
+            onChangeText={setOdds}
+            style={styles.input}
+            keyboardType="decimal-pad"
+            placeholder="1.85"
+          />
+        </View>
+
+        <View style={{ width: 12 }} />
+
+        <View style={{ flex: 1 }}>
+          <Label label="Points" />
+          <TextInput
+            value={points}
+            onChangeText={setPoints}
+            style={styles.input}
+            keyboardType="decimal-pad"
+            placeholder="2"
+          />
+        </View>
+      </View>
+
+      <TouchableOpacity style={[styles.btn, saving && { opacity: 0.7 }]} onPress={onAdd} disabled={saving}>
+        <Text style={styles.btnText}>{saving ? "Adding..." : "Add Bet"}</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.note}>
+        Result profit formula:
+        {"\n"}• Win = (odds − 1) × points
+        {"\n"}• Loss = −points
+        {"\n"}• Void = 0
+      </Text>
+    </View>
+  );
+}
+
+function Label({ label }: { label: string }) {
+  return <Text style={styles.label}>{label}</Text>;
+}
+
+function BetsList({
+  title,
+  subtitle,
+  items,
+  showResultButtons,
+}: {
+  title: string;
+  subtitle: string;
+  items: Pick[];
+  showResultButtons: boolean;
+}) {
+  return (
+    <View style={styles.panel}>
+      <Text style={styles.h1}>{title}</Text>
+      <Text style={styles.sub}>{subtitle}</Text>
+
+      {items.length === 0 ? (
+        <Text style={styles.empty}>No bets found.</Text>
+      ) : (
+        <ScrollView style={{ marginTop: 10 }}>
+          {items.map((p) => (
+            <PickRow key={p.id} pick={p} showResultButtons={showResultButtons} />
+          ))}
+          <View style={{ height: 12 }} />
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+function PickRow({ pick, showResultButtons }: { pick: Pick; showResultButtons: boolean }) {
+  const [busy, setBusy] = useState(false);
+
+  const onSet = async (status: PickStatus) => {
+    try {
+      setBusy(true);
+      await setPickResult(pick.id, status, Number(pick.odds), Number(pick.points));
+      Alert.alert("Updated ✅", `Marked as ${status.toUpperCase()}`);
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Could not update result");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <View style={styles.pickCard}>
+      <View style={styles.pickTop}>
+        <Text style={styles.pickTime}>{pick.kickoffTime}</Text>
+        <Text style={styles.pickStatus}>{(pick.status || "pending").toUpperCase()}</Text>
+      </View>
+
+      <Text style={styles.pickFixture}>{pick.fixture}</Text>
+      <Text style={styles.pickMarket}>{pick.market}</Text>
+
+      <View style={styles.pickMeta}>
+        <Text style={styles.meta}>Odds: {pick.odds}</Text>
+        <Text style={styles.meta}>Points: {pick.points}</Text>
+        <Text style={styles.meta}>P/L: {typeof pick.profit === "number" ? pick.profit : 0}</Text>
+      </View>
+
+      {showResultButtons && (
+        <View style={styles.actions}>
+          <ActionBtn label="WON" onPress={() => onSet("won")} disabled={busy} />
+          <ActionBtn label="LOST" onPress={() => onSet("lost")} disabled={busy} />
+          <ActionBtn label="VOID" onPress={() => onSet("void")} disabled={busy} />
+        </View>
+      )}
+
+      {!showResultButtons && (
+        <Text style={styles.noteSmall}>Tomorrow list is just for checking. Results are set from Today’s list.</Text>
+      )}
+    </View>
+  );
+}
+
+function ActionBtn({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
+  return (
+    <TouchableOpacity onPress={onPress} disabled={disabled} style={[styles.smallBtn, disabled && { opacity: 0.6 }]}>
+      <Text style={styles.smallBtnText}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  tabs: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+    marginBottom: 10,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    alignItems: "center",
+  },
+  tabActive: {
+    backgroundColor: "rgba(208,170,71,0.22)",
+    borderColor: "rgba(208,170,71,0.35)",
+  },
+  tabText: { color: COLORS.muted, fontWeight: "800", fontSize: 12 },
+  tabTextActive: { color: COLORS.gold },
+
+  panel: {
+    backgroundColor: COLORS.panel,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+  },
+
+  h1: { color: COLORS.gold, fontWeight: "900", fontSize: 18, marginBottom: 6 },
+  sub: { color: COLORS.muted, marginBottom: 12 },
+
+  row: { flexDirection: "row", alignItems: "center" },
+
+  pill: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    marginRight: 8,
+  },
+  pillActive: {
+    backgroundColor: "rgba(208,170,71,0.22)",
+    borderColor: "rgba(208,170,71,0.35)",
+  },
+  pillText: { color: COLORS.muted, fontWeight: "900" },
+  pillTextActive: { color: COLORS.gold },
+
+  dayKey: { color: COLORS.muted, fontSize: 12, fontWeight: "700" },
+
+  label: { color: COLORS.muted, fontWeight: "800", marginTop: 10, marginBottom: 6 },
+  input: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: "white",
+  },
+
+  btn: {
+    backgroundColor: COLORS.gold,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    marginTop: 14,
+  },
+  btnText: { fontWeight: "900", color: "#111" },
+
+  note: { color: COLORS.muted, fontSize: 12, marginTop: 12, lineHeight: 16 },
+  noteSmall: { color: COLORS.muted, fontSize: 12, marginTop: 10 },
+
+  empty: { color: COLORS.muted, marginTop: 10 },
+
+  pickCard: {
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+  },
+  pickTop: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
+  pickTime: { color: "white", fontWeight: "900" },
+  pickStatus: { color: COLORS.muted, fontWeight: "900", fontSize: 12 },
+
+  pickFixture: { color: "white", fontWeight: "900", fontSize: 14, marginBottom: 4 },
+  pickMarket: { color: COLORS.muted, marginBottom: 8 },
+
+  pickMeta: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
+  meta: { color: COLORS.muted, fontWeight: "800", fontSize: 12 },
+
+  actions: { flexDirection: "row", gap: 10, marginTop: 12 },
+  smallBtn: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  smallBtnText: { color: "white", fontWeight: "900", fontSize: 12 },
+});
+
+
+
+
+
+
+
+
+// src/screens/ResultsScreen.tsx
+import React, { useEffect, useMemo, useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+
+import HeaderBar from "../components/HeaderBar";
+import ScreenShell from "../components/ScreenShell";
+import { COLORS } from "../theme/colors";
+
+import { listenResultsByDay, Pick, todayKey } from "../lib/picks";
+
+export default function ResultsScreen() {
+  const [items, setItems] = useState<Pick[]>([]);
+  const dayKey = useMemo(() => todayKey(), []);
+
+  useEffect(() => {
+    const unsub = listenResultsByDay(dayKey, setItems);
+    return () => unsub && unsub();
+  }, [dayKey]);
+
+  const total = items.reduce((sum, p) => sum + (typeof p.profit === "number" ? p.profit : 0), 0);
+
+  return (
+    <ScreenShell>
+      <HeaderBar title="Results" />
+
+      <View style={styles.card}>
+        <Text style={styles.title}>Today’s Results</Text>
+        <Text style={styles.sub}>Day: {dayKey}</Text>
+        <Text style={styles.total}>Total P/L: {total.toFixed(2)} pts</Text>
+
+        <ScrollView style={{ marginTop: 12 }}>
+          {items.length === 0 ? (
+            <Text style={styles.empty}>No results yet.</Text>
+          ) : (
+            items.map((p) => (
+              <View key={p.id} style={styles.row}>
+                <Text style={styles.time}>{p.kickoffTime}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fixture}>{p.fixture}</Text>
+                  <Text style={styles.market}>{p.market}</Text>
+                </View>
+                <Text style={styles.pl}>{(p.profit ?? 0).toFixed(2)}</Text>
+              </View>
+            ))
+          )}
+          <View style={{ height: 12 }} />
+        </ScrollView>
+      </View>
+    </ScreenShell>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: COLORS.panel,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    marginTop: 18,
+  },
+  title: { color: COLORS.gold, fontWeight: "900", fontSize: 18, marginBottom: 6 },
+  sub: { color: COLORS.muted, marginBottom: 10 },
+  total: { color: "white", fontWeight: "900", marginBottom: 4 },
+  empty: { color: COLORS.muted, marginTop: 8 },
+
+  row: {
+    flexDirection: "row",
+    gap: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.06)",
+  },
+  time: { width: 54, color: COLORS.muted, fontWeight: "900" },
+  fixture: { color: "white", fontWeight: "900" },
+  market: { color: COLORS.muted, marginTop: 2 },
+  pl: { width: 70, textAlign: "right", color: "white", fontWeight: "900" },
+});
+
+
+
