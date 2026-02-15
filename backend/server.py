@@ -33,6 +33,17 @@ ADMIN_CODE = os.environ.get('ADMIN_CODE', 'syndicate2024')
 # Create the main app
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://the25syndicate.vercel.app",
+        "http://localhost:3000"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Create routers
 api_router = APIRouter(prefix="/api")
 
