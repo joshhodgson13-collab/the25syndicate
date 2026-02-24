@@ -323,7 +323,7 @@ async def get_today_bets():
     bets = await db.bets.find(
         {"date": today, "is_vip": False, "status": "pending"},
         {"_id": 0}
-    ).sort("kick_off", 1).to_list(100)
+    ).sort("kick_off", -1).to_list(100)
     return [BetResponse(**bet) for bet in bets]
 
 @api_router.get("/bets/results", response_model=List[BetResponse])
@@ -343,7 +343,7 @@ async def get_vip_today_bets(user: dict = Depends(get_current_user)):
     bets = await db.bets.find(
         {"date": today, "is_vip": True, "status": "pending"},
         {"_id": 0}
-    ).sort("kick_off", 1).to_list(5000)
+    ).sort("kick_off", -1).to_list(5000)
     return [BetResponse(**bet) for bet in bets]
 
 @api_router.get("/bets/vip/results", response_model=List[BetResponse])
