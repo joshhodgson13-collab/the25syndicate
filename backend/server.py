@@ -331,7 +331,7 @@ async def get_results():
     bets = await db.bets.find(
         {"status": {"$in": ["won", "lost"]}, "is_vip": False},
         {"_id": 0}
-    ).sort("kick_off", -1).to_list(100)
+    ).sort("kick_off", -1).to_list(5000)
     return [BetResponse(**bet) for bet in bets]
 
 @api_router.get("/bets/vip/today", response_model=List[BetResponse])
@@ -343,7 +343,7 @@ async def get_vip_today_bets(user: dict = Depends(get_current_user)):
     bets = await db.bets.find(
         {"date": today, "is_vip": True, "status": "pending"},
         {"_id": 0}
-    ).sort("kick_off", 1).to_list(100)
+    ).sort("kick_off", 1).to_list(5000)
     return [BetResponse(**bet) for bet in bets]
 
 @api_router.get("/bets/vip/results", response_model=List[BetResponse])
@@ -354,7 +354,7 @@ async def get_vip_results(user: dict = Depends(get_current_user)):
     bets = await db.bets.find(
         {"status": {"$in": ["won", "lost"]}, "is_vip": True},
         {"_id": 0}
-    ).sort("kick_off", -1).to_list(100)
+    ).sort("kick_off", -1).to_list(5000)
     return [BetResponse(**bet) for bet in bets]
 
 # ============ STRIPE PAYMENT ROUTES ============
